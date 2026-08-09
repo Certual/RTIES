@@ -49,11 +49,6 @@
             overflow: hidden;
         }
 
-        .col-left {
-            overflow-y: auto;
-            padding-right: 5px;
-        }
-
         ::-webkit-scrollbar { width: 8px; }
         ::-webkit-scrollbar-track { background: rgba(0,0,0,0.1); border-radius: 4px; }
         ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
@@ -70,7 +65,7 @@
         }
 
         .panel-auto { flex: 0 0 auto; }
-        .panel-flex { flex: 1 1 auto; overflow: hidden; padding-bottom: 0; }
+        .panel-flex { flex: 1 1 auto; overflow: hidden; }
 
         h1, h2, h3 { color: var(--accent-cyan); margin-bottom: 15px; font-weight: 600; flex-shrink: 0; }
 
@@ -83,6 +78,13 @@
         }
         .form-header h2 { margin-bottom: 0; }
 
+        .form-scroll-area {
+            overflow-y: auto;
+            flex: 1 1 auto;
+            padding-right: 5px;
+            margin-right: -5px;
+        }
+
         .form-group { margin-bottom: 15px; flex-shrink: 0; }
         .form-group label { display: block; margin-bottom: 5px; color: var(--text-main); font-size: 0.9em; }
         .form-group input[type="text"], .form-group input[type="number"] {
@@ -93,11 +95,18 @@
 
         .checkbox-group { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; color: var(--text-main); flex-shrink: 0; }
 
+        .action-container {
+            position: relative;
+            flex-shrink: 0;
+            margin-top: 15px;
+        }
+
         button {
             width: 100%; padding: 12px; background: transparent; color: var(--text-main);
             border: 2px solid var(--border); border-radius: 5px; cursor: pointer;
             font-size: 1em; font-weight: bold; margin-bottom: 10px; flex-shrink: 0;
         }
+        button:last-child { margin-bottom: 0; }
         button:hover { background: var(--accent-cyan); border-color: var(--accent-cyan); color: var(--bg-color); }
         .btn-alt:hover { background: var(--accent-teal); border-color: var(--accent-teal); color: var(--bg-color); }
         
@@ -112,8 +121,11 @@
         }
         .options-btn:hover { background: rgba(255,255,255,0.05); border-color: var(--text-main); color: var(--text-main); }
 
-        /* Динамическая кнопка очистки ввода */
         .dynamic-btn {
+            position: absolute;
+            bottom: 100%;
+            left: 0;
+            width: 100%;
             max-height: 0;
             opacity: 0;
             margin-bottom: 0;
@@ -214,7 +226,7 @@
             .container { grid-template-columns: 1fr; height: auto; }
             .col { height: auto; overflow: visible; }
             .charts-row { flex-direction: column; }
-            .panel-flex { height: 600px; padding-bottom: 20px; }
+            .panel-flex { height: 600px; }
             .chart-container { height: 250px; }
         }
     </style>
@@ -223,47 +235,50 @@
 
 <div class="container">
     <div class="col col-left">
-        <div class="panel panel-auto">
+        <div class="panel panel-flex">
             <div class="form-header">
                 <h2 id="formTitle">Ввод данных за День <span id="currentDayLabel">1</span></h2>
                 <button class="options-btn" onclick="openRegulations()">⚙ Опции</button>
             </div>
             
-            <div class="form-group">
-                <label>Formula 1 (25 результатов):</label>
-                <input type="text" id="f1-results" class="form-input-watch" placeholder="Напр: 210 215 205...">
-            </div>
-            <div class="form-group">
-                <label>Formula 1 - Фальшстарты:</label>
-                <input type="number" id="f1-false" class="form-input-watch" value="0" min="0">
-            </div>
-            
-            <hr style="border-color: var(--border); margin:15px 0; flex-shrink: 0;">
+            <div class="form-scroll-area">
+                <div class="form-group">
+                    <label>Formula 1 (25 результатов):</label>
+                    <input type="text" id="f1-results" class="form-input-watch" placeholder="Напр: 210 215 205...">
+                </div>
+                <div class="form-group">
+                    <label>Formula 1 - Фальшстарты:</label>
+                    <input type="number" id="f1-false" class="form-input-watch" value="0" min="0">
+                </div>
+                
+                <hr style="border-color: var(--border); margin:15px 0;">
 
-            <div class="form-group">
-                <label>Human Benchmark (5 усредненных):</label>
-                <input type="text" id="hb-results" class="form-input-watch" placeholder="Напр: 195 200 190...">
-            </div>
-            <div class="form-group">
-                <label>Human Benchmark - Фальшстарты:</label>
-                <input type="number" id="hb-false" class="form-input-watch" value="0" min="0">
+                <div class="form-group">
+                    <label>Human Benchmark (5 усредненных):</label>
+                    <input type="text" id="hb-results" class="form-input-watch" placeholder="Напр: 195 200 190...">
+                </div>
+                <div class="form-group">
+                    <label>Human Benchmark - Фальшстарты:</label>
+                    <input type="number" id="hb-false" class="form-input-watch" value="0" min="0">
+                </div>
+
+                <hr style="border-color: var(--border); margin:15px 0;">
+
+                <div class="checkbox-group">
+                    <input type="checkbox" id="osu-done">
+                    <label for="osu-done">Osu HRDTHD (30 мин) (Опционально)</label>
+                </div>
+                <div class="checkbox-group">
+                    <input type="checkbox" id="kovaaks-done">
+                    <label for="kovaaks-done">Kovaak's (30 мин)</label>
+                </div>
             </div>
 
-            <hr style="border-color: var(--border); margin:15px 0; flex-shrink: 0;">
-
-            <div class="checkbox-group">
-                <input type="checkbox" id="osu-done">
-                <label for="osu-done">Osu HRDTHD (30 мин) (Опционально)</label>
+            <div class="action-container">
+                <button id="clearInputBtn" class="btn-alt dynamic-btn" onclick="clearCurrentInput()">Очистить ввод</button>
+                <button id="saveBtn" onclick="saveDay()">Сохранить результаты</button>
+                <button id="cancelEditBtn" class="btn-alt" style="display:none;" onclick="cancelEdit()">Отменить редактирование</button>
             </div>
-            <div class="checkbox-group">
-                <input type="checkbox" id="kovaaks-done">
-                <label for="kovaaks-done">Kovaak's (30 мин)</label>
-            </div>
-
-            <button id="clearInputBtn" class="btn-alt dynamic-btn" onclick="clearCurrentInput()">Очистить ввод</button>
-            
-            <button id="saveBtn" onclick="saveDay()">Сохранить результаты</button>
-            <button id="cancelEditBtn" class="btn-alt" style="display:none;" onclick="cancelEdit()">Отменить редактирование</button>
         </div>
     </div>
 
@@ -404,7 +419,7 @@
     }
 
     function checkFormInputs() {
-        if (editIndex > -1) return; // Не показывать кнопку при редактировании истории
+        if (editIndex > -1) return;
 
         const f1Text = document.getElementById('f1-results').value.trim();
         const hbText = document.getElementById('hb-results').value.trim();
@@ -557,7 +572,7 @@
         document.getElementById('formTitle').innerText = `Редактирование Дня ${data.day}`;
         document.getElementById('saveBtn').innerText = "Обновить данные";
         document.getElementById('cancelEditBtn').style.display = "block";
-        document.getElementById('clearInputBtn').classList.remove('visible'); // Прячем динамическую очистку
+        document.getElementById('clearInputBtn').classList.remove('visible');
     }
 
     function deleteDay(index) {
@@ -586,7 +601,7 @@
         document.getElementById('formTitle').innerHTML = `Ввод данных за День <span id="currentDayLabel">${experimentData.length + 1}</span>`;
         document.getElementById('saveBtn').innerText = "Сохранить результаты";
         document.getElementById('cancelEditBtn').style.display = "none";
-        checkFormInputs(); // Триггерит скрытие динамической кнопки
+        checkFormInputs();
     }
 
     function clearData() {
