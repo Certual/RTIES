@@ -156,7 +156,7 @@
 <div class="container">
     <div>
         <div class="panel">
-            <h2 id="formTitle">Ввод данных за День <span id="currentDayLabel"></span></h2>
+            <h2 id="formTitle">Ввод данных за День <span id="currentDayLabel">1</span></h2>
             <div class="form-group">
                 <label>Formula 1 (25 результатов через пробел):</label>
                 <input type="text" id="f1-results">
@@ -233,18 +233,7 @@
 </div>
 
 <script>
-    const initialData = [{
-        day: 1,
-        f1Raw: "197 206 198 223 244 207 221 215 196 178 200 179 269 283 183 211 173 208 180 189 168 183 182 196 288",
-        hbRaw: "187 172 180 177 183",
-        f1: { mean: 207.08, min: 168, max: 288, falseStarts: 0 },
-        hb: { mean: 179.8, min: 172, max: 187, falseStarts: 0 },
-        total: { mean: 193.44, min: 170.00, max: 237.50, falseStarts: 0 },
-        osu: false,
-        kovaaks: false
-    }];
-
-    let experimentData = JSON.parse(localStorage.getItem('reactionExperimentData')) || initialData;
+    let experimentData = JSON.parse(localStorage.getItem('reactionExperimentData')) || [];
     let reactionChartInstance = null;
     let falseStartsChartInstance = null;
     let editIndex = -1;
@@ -361,7 +350,7 @@
     function clearData() {
         if (confirm("Полностью очистить историю?")) {
             localStorage.removeItem('reactionExperimentData');
-            experimentData = [...initialData];
+            experimentData = [];
             init();
         }
     }
@@ -380,7 +369,25 @@
     }
 
     function updateDashboard() {
-        if (experimentData.length === 0) return;
+        if (experimentData.length === 0) {
+            document.getElementById('latest-stats').innerHTML = `
+                <div class="stat-card overall">
+                    <div>Общее Среднее (мс)</div>
+                    <div class="stat-value">—</div>
+                </div>
+                <div class="stat-card">
+                    <div>Общий Минимум (мс)</div>
+                    <div class="stat-value">—</div>
+                </div>
+                <div class="stat-card danger">
+                    <div>Фальшстарты (Всего)</div>
+                    <div class="stat-value">0</div>
+                </div>
+            `;
+            document.getElementById('history-body').innerHTML = '<tr><td colspan="9">Нет сохраненных данных</td></tr>';
+            updateCharts();
+            return;
+        }
         
         const latest = experimentData[experimentData.length - 1];
         const day1 = experimentData[0];
@@ -434,7 +441,6 @@
     function updateCharts() {
         const labels = experimentData.map(d => `День ${d.day}`);
         
-        // График реакций
         const ctxReaction = document.getElementById('reactionChart').getContext('2d');
         if (reactionChartInstance) reactionChartInstance.destroy();
         reactionChartInstance = new Chart(ctxReaction, {
@@ -454,7 +460,6 @@
             }
         });
 
-        // График фальшстартов
         const ctxFalse = document.getElementById('falseStartsChart').getContext('2d');
         if (falseStartsChartInstance) falseStartsChartInstance.destroy();
         falseStartsChartInstance = new Chart(ctxFalse, {
