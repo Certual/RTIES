@@ -16,6 +16,7 @@
             --danger: #ff4c4c;
             --success: #4caf50;
             --warning: #f1c40f;
+            --border: #333333;
         }
 
         * {
@@ -23,6 +24,7 @@
             margin: 0;
             padding: 0;
             font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            transition: background-color 0.3s, color 0.3s, border-color 0.3s;
         }
 
         body {
@@ -33,14 +35,14 @@
         }
 
         .container {
-            max-width: 1500px;
+            max-width: 1600px;
             margin: 0 auto;
             display: grid;
             grid-template-columns: 1fr 2fr;
             gap: 20px;
         }
 
-        @media (max-width: 1024px) {
+        @media (max-width: 1200px) {
             .container { grid-template-columns: 1fr; }
         }
 
@@ -48,8 +50,9 @@
             background-color: var(--panel-bg);
             border-radius: 10px;
             padding: 20px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
             margin-bottom: 20px;
+            border: 1px solid var(--border);
         }
 
         h1, h2, h3 {
@@ -65,15 +68,15 @@
             color: var(--text-light);
             font-size: 0.9em;
         }
-        .form-group input[type="text"], .form-group input[type="number"] {
+        .form-group input[type="text"], .form-group input[type="number"], select {
             width: 100%;
             padding: 10px;
-            background: #111;
-            border: 1px solid #333;
-            color: #fff;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--border);
+            color: var(--text-light);
             border-radius: 5px;
         }
-        .form-group input:focus {
+        .form-group input:focus, select:focus {
             border-color: var(--accent-cyan);
             outline: none;
         }
@@ -110,24 +113,25 @@
 
         .stats-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
             gap: 15px;
             margin-bottom: 20px;
         }
         .stat-card {
-            background: rgba(0,0,0,0.3);
+            background: rgba(0,0,0,0.15);
             padding: 15px;
             border-radius: 8px;
-            border: 1px solid #333;
+            border: 1px solid var(--border);
         }
         .stat-card.overall { border-color: var(--accent-teal); }
-        .stat-card.danger { border-color: var(--danger); }
         .stat-value {
-            font-size: 1.5em;
+            font-size: 1.2em;
             color: var(--text-light);
             font-weight: bold;
+            margin: 5px 0;
         }
-        .growth { font-size: 0.8em; }
+        .stat-subtext { font-size: 0.85em; opacity: 0.8; }
+        .growth { font-size: 0.85em; display: block; margin-top: 5px; }
         .growth.positive { color: var(--success); }
         .growth.negative { color: var(--danger); }
 
@@ -146,9 +150,22 @@
         .history-table th, .history-table td {
             padding: 10px;
             text-align: center;
-            border-bottom: 1px solid #333;
+            border-bottom: 1px solid var(--border);
         }
         .history-table th { color: var(--accent-cyan); }
+
+        #customThemeSettings {
+            display: none;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 15px;
+            background: rgba(0,0,0,0.2);
+            padding: 15px;
+            border-radius: 5px;
+            border: 1px solid var(--border);
+        }
+        .color-picker-group { display: flex; justify-content: space-between; align-items: center; }
+        .color-picker-group input[type="color"] { width: 40px; height: 30px; border: none; padding: 0; background: none; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -156,9 +173,35 @@
 <div class="container">
     <div>
         <div class="panel">
+            <h2>Настройки темы</h2>
+            <select id="themeSelect" onchange="applyTheme()">
+                <option value="default">Default Dark</option>
+                <option value="materialDark">Material Dark</option>
+                <option value="materialLight">Material Light</option>
+                <option value="fluentDark">Fluent Dark</option>
+                <option value="fluentLight">Fluent Light</option>
+                <option value="dracula">Dracula</option>
+                <option value="nord">Nord</option>
+                <option value="solarized">Solarized Dark</option>
+                <option value="cyberpunk">Cyberpunk</option>
+                <option value="monokai">Monokai</option>
+                <option value="custom">Пользовательская</option>
+            </select>
+
+            <div id="customThemeSettings">
+                <div class="color-picker-group"><label>Фон:</label><input type="color" id="color-bg" onchange="updateCustomTheme()"></div>
+                <div class="color-picker-group"><label>Панели:</label><input type="color" id="color-panel" onchange="updateCustomTheme()"></div>
+                <div class="color-picker-group"><label>Акцент 1:</label><input type="color" id="color-accent1" onchange="updateCustomTheme()"></div>
+                <div class="color-picker-group"><label>Акцент 2:</label><input type="color" id="color-accent2" onchange="updateCustomTheme()"></div>
+                <div class="color-picker-group"><label>Текст:</label><input type="color" id="color-text" onchange="updateCustomTheme()"></div>
+                <div class="color-picker-group"><label>Границы:</label><input type="color" id="color-border" onchange="updateCustomTheme()"></div>
+            </div>
+        </div>
+
+        <div class="panel">
             <h2 id="formTitle">Ввод данных за День <span id="currentDayLabel">1</span></h2>
             <div class="form-group">
-                <label>Formula 1 (25 результатов через пробел):</label>
+                <label>Formula 1 (25 результатов):</label>
                 <input type="text" id="f1-results">
             </div>
             <div class="form-group">
@@ -166,10 +209,10 @@
                 <input type="number" id="f1-false" value="0" min="0">
             </div>
             
-            <hr style="border-color:#333; margin:15px 0;">
+            <hr style="border-color: var(--border); margin:15px 0;">
 
             <div class="form-group">
-                <label>Human Benchmark (5 усредненных результатов через пробел):</label>
+                <label>Human Benchmark (5 усредненных):</label>
                 <input type="text" id="hb-results">
             </div>
             <div class="form-group">
@@ -177,7 +220,7 @@
                 <input type="number" id="hb-false" value="0" min="0">
             </div>
 
-            <hr style="border-color:#333; margin:15px 0;">
+            <hr style="border-color: var(--border); margin:15px 0;">
 
             <div class="checkbox-group">
                 <input type="checkbox" id="osu-done">
@@ -196,33 +239,27 @@
 
     <div>
         <div class="panel">
-            <h2>Статистика</h2>
+            <h2>Статистика (Последний день)</h2>
             <div class="stats-grid" id="latest-stats"></div>
             
-            <h2>Динамика скорости реакции</h2>
-            <div class="chart-container">
-                <canvas id="reactionChart"></canvas>
-            </div>
-
-            <h2>Статистика фальшстартов</h2>
-            <div class="chart-container">
-                <canvas id="falseStartsChart"></canvas>
-            </div>
+            <h2>Динамика показателей</h2>
+            <div class="chart-container"><canvas id="reactionChart"></canvas></div>
+            
+            <h2>Фальшстарты</h2>
+            <div class="chart-container"><canvas id="falseStartsChart"></canvas></div>
         </div>
 
-        <div class="panel">
+        <div class="panel" style="overflow-x: auto;">
             <h2>История результатов</h2>
             <table class="history-table">
                 <thead>
                     <tr>
                         <th>День</th>
-                        <th>Общ. Ср.</th>
-                        <th>Общ. Мин.</th>
-                        <th>Общ. Макс.</th>
-                        <th>F1 ФС</th>
-                        <th>HB ФС</th>
-                        <th>Osu</th>
-                        <th>Kovaak's</th>
+                        <th>Общее (Ср / Мин / Макс)</th>
+                        <th>F1 (Ср / Мин / Макс)</th>
+                        <th>HB (Ср / Мин / Макс)</th>
+                        <th>ФС (F1/HB)</th>
+                        <th>Osu / Kovaak's</th>
                         <th>Действия</th>
                     </tr>
                 </thead>
@@ -233,21 +270,87 @@
 </div>
 
 <script>
+    const themes = {
+        default: { bg: '#0b0c10', panel: '#1f2833', acc1: '#66fcf1', acc2: '#45a29e', text: '#c5c6c7', textL: '#ffffff', border: '#333333' },
+        materialDark: { bg: '#121212', panel: '#1e1e1e', acc1: '#bb86fc', acc2: '#03dac6', text: '#e0e0e0', textL: '#ffffff', border: '#333333' },
+        materialLight: { bg: '#fafafa', panel: '#ffffff', acc1: '#6200ee', acc2: '#03dac6', text: '#333333', textL: '#000000', border: '#e0e0e0' },
+        fluentDark: { bg: '#202020', panel: '#2b2b2b', acc1: '#60cdff', acc2: '#0078d4', text: '#cccccc', textL: '#ffffff', border: '#454545' },
+        fluentLight: { bg: '#f3f3f3', panel: '#ffffff', acc1: '#0078d4', acc2: '#005a9e', text: '#333333', textL: '#000000', border: '#e5e5e5' },
+        dracula: { bg: '#282a36', panel: '#44475a', acc1: '#ff79c6', acc2: '#bd93f9', text: '#f8f8f2', textL: '#ffffff', border: '#6272a4' },
+        nord: { bg: '#2e3440', panel: '#3b4252', acc1: '#88c0d0', acc2: '#8fbcbb', text: '#d8dee9', textL: '#eceff4', border: '#4c566a' },
+        solarized: { bg: '#002b36', panel: '#073642', acc1: '#2aa198', acc2: '#268bd2', text: '#93a1a1', textL: '#eee8d5', border: '#586e75' },
+        cyberpunk: { bg: '#fcee0a', panel: '#000000', acc1: '#00ff00', acc2: '#ff003c', text: '#ffffff', textL: '#fcee0a', border: '#ff003c' },
+        monokai: { bg: '#272822', panel: '#3e3d32', acc1: '#f92672', acc2: '#a6e22e', text: '#f8f8f2', textL: '#ffffff', border: '#75715e' }
+    };
+
     let experimentData = JSON.parse(localStorage.getItem('reactionExperimentData')) || [];
+    let currentThemeConfig = JSON.parse(localStorage.getItem('reactionThemeConfig')) || { name: 'default', custom: themes.default };
+    
     let reactionChartInstance = null;
     let falseStartsChartInstance = null;
     let editIndex = -1;
 
     function init() {
+        document.getElementById('themeSelect').value = currentThemeConfig.name;
+        applyTheme(true);
         resetForm();
         updateDashboard();
     }
 
+    function applyTheme(isInit = false) {
+        const select = document.getElementById('themeSelect');
+        const customSettings = document.getElementById('customThemeSettings');
+        const name = select.value;
+        
+        let colors;
+        if (name === 'custom') {
+            customSettings.style.display = 'grid';
+            colors = currentThemeConfig.custom;
+            if (isInit) {
+                document.getElementById('color-bg').value = colors.bg;
+                document.getElementById('color-panel').value = colors.panel;
+                document.getElementById('color-accent1').value = colors.acc1;
+                document.getElementById('color-accent2').value = colors.acc2;
+                document.getElementById('color-text').value = colors.text;
+                document.getElementById('color-border').value = colors.border;
+            }
+        } else {
+            customSettings.style.display = 'none';
+            colors = themes[name];
+        }
+
+        document.documentElement.style.setProperty('--bg-color', colors.bg);
+        document.documentElement.style.setProperty('--panel-bg', colors.panel);
+        document.documentElement.style.setProperty('--accent-cyan', colors.acc1);
+        document.documentElement.style.setProperty('--accent-teal', colors.acc2);
+        document.documentElement.style.setProperty('--text-main', colors.text);
+        document.documentElement.style.setProperty('--text-light', colors.textL || colors.text);
+        document.documentElement.style.setProperty('--border', colors.border);
+
+        currentThemeConfig.name = name;
+        if (name !== 'custom') currentThemeConfig.custom = colors;
+        localStorage.setItem('reactionThemeConfig', JSON.stringify(currentThemeConfig));
+
+        updateCharts();
+    }
+
+    function updateCustomTheme() {
+        currentThemeConfig.custom = {
+            bg: document.getElementById('color-bg').value,
+            panel: document.getElementById('color-panel').value,
+            acc1: document.getElementById('color-accent1').value,
+            acc2: document.getElementById('color-accent2').value,
+            text: document.getElementById('color-text').value,
+            textL: document.getElementById('color-text').value,
+            border: document.getElementById('color-border').value
+        };
+        applyTheme();
+    }
+
     function calculateStats(arr) {
         if (!arr || arr.length === 0) return { mean: 0, min: 0, max: 0 };
-        const mean = arr.reduce((a, b) => a + b, 0) / arr.length;
         return { 
-            mean: parseFloat(mean.toFixed(2)), 
+            mean: parseFloat((arr.reduce((a, b) => a + b, 0) / arr.length).toFixed(2)), 
             min: Math.min(...arr), 
             max: Math.max(...arr) 
         };
@@ -264,29 +367,21 @@
             return;
         }
 
-        const f1False = parseInt(document.getElementById('f1-false').value) || 0;
-        const hbFalse = parseInt(document.getElementById('hb-false').value) || 0;
-        const osu = document.getElementById('osu-done').checked;
-        const kovaaks = document.getElementById('kovaaks-done').checked;
-
         const f1Stats = calculateStats(f1Input);
-        f1Stats.falseStarts = f1False;
+        f1Stats.falseStarts = parseInt(document.getElementById('f1-false').value) || 0;
         
         const hbStats = calculateStats(hbInput);
-        hbStats.falseStarts = hbFalse;
-
-        const totalMean = parseFloat(((f1Stats.mean + hbStats.mean) / 2).toFixed(2));
-        const totalMin = parseFloat(((f1Stats.min + hbStats.min) / 2).toFixed(2));
-        const totalMax = parseFloat(((f1Stats.max + hbStats.max) / 2).toFixed(2));
+        hbStats.falseStarts = parseInt(document.getElementById('hb-false').value) || 0;
 
         const dayRecord = {
-            f1Raw,
-            hbRaw,
-            f1: f1Stats,
-            hb: hbStats,
-            total: { mean: totalMean, min: totalMin, max: totalMax, falseStarts: f1False + hbFalse },
-            osu,
-            kovaaks
+            f1Raw, hbRaw, f1: f1Stats, hb: hbStats,
+            total: { 
+                mean: parseFloat(((f1Stats.mean + hbStats.mean) / 2).toFixed(2)), 
+                min: parseFloat(((f1Stats.min + hbStats.min) / 2).toFixed(2)), 
+                max: parseFloat(((f1Stats.max + hbStats.max) / 2).toFixed(2))
+            },
+            osu: document.getElementById('osu-done').checked,
+            kovaaks: document.getElementById('kovaaks-done').checked
         };
 
         if (editIndex > -1) {
@@ -297,7 +392,7 @@
             experimentData.push(dayRecord);
         }
 
-        saveToLocal();
+        localStorage.setItem('reactionExperimentData', JSON.stringify(experimentData));
         resetForm();
         updateDashboard();
     }
@@ -305,14 +400,12 @@
     function editDay(index) {
         editIndex = index;
         const data = experimentData[index];
-        
         document.getElementById('f1-results').value = data.f1Raw || '';
         document.getElementById('hb-results').value = data.hbRaw || '';
         document.getElementById('f1-false').value = data.f1.falseStarts;
         document.getElementById('hb-false').value = data.hb.falseStarts;
         document.getElementById('osu-done').checked = data.osu;
         document.getElementById('kovaaks-done').checked = data.kovaaks;
-
         document.getElementById('formTitle').innerText = `Редактирование Дня ${data.day}`;
         document.getElementById('saveBtn').innerText = "Обновить данные";
         document.getElementById('cancelEditBtn').style.display = "block";
@@ -320,10 +413,10 @@
     }
 
     function deleteDay(index) {
-        if (confirm(`Удалить День ${experimentData[index].day}? Восстановление невозможно.`)) {
+        if (confirm(`Удалить День ${experimentData[index].day}?`)) {
             experimentData.splice(index, 1);
             experimentData.forEach((d, i) => d.day = i + 1);
-            saveToLocal();
+            localStorage.setItem('reactionExperimentData', JSON.stringify(experimentData));
             cancelEdit();
             updateDashboard();
         }
@@ -341,7 +434,6 @@
         document.getElementById('hb-false').value = '0';
         document.getElementById('osu-done').checked = false;
         document.getElementById('kovaaks-done').checked = false;
-        
         document.getElementById('formTitle').innerHTML = `Ввод данных за День <span id="currentDayLabel">${experimentData.length + 1}</span>`;
         document.getElementById('saveBtn').innerText = "Сохранить результаты";
         document.getElementById('cancelEditBtn').style.display = "none";
@@ -355,81 +447,69 @@
         }
     }
 
-    function saveToLocal() {
-        localStorage.setItem('reactionExperimentData', JSON.stringify(experimentData));
-    }
-
     function getGrowthHTML(current, initial) {
         if (!initial) return '';
         const percent = ((current - initial) / initial) * 100;
-        const isNegative = percent < 0; 
-        const cls = isNegative ? 'positive' : 'negative'; 
-        const sign = percent > 0 ? '+' : '';
-        return `<span class="growth ${cls}">${sign}${percent.toFixed(2)}% от Дня 1</span>`;
+        const cls = percent <= 0 ? 'positive' : 'negative'; 
+        return `<span class="growth ${cls}">${percent > 0 ? '+' : ''}${percent.toFixed(2)}% от Дня 1</span>`;
     }
 
     function updateDashboard() {
+        const statsEl = document.getElementById('latest-stats');
+        const tbody = document.getElementById('history-body');
+
         if (experimentData.length === 0) {
-            document.getElementById('latest-stats').innerHTML = `
-                <div class="stat-card overall">
-                    <div>Общее Среднее (мс)</div>
-                    <div class="stat-value">—</div>
-                </div>
-                <div class="stat-card">
-                    <div>Общий Минимум (мс)</div>
-                    <div class="stat-value">—</div>
-                </div>
-                <div class="stat-card danger">
-                    <div>Фальшстарты (Всего)</div>
-                    <div class="stat-value">0</div>
-                </div>
-            `;
-            document.getElementById('history-body').innerHTML = '<tr><td colspan="9">Нет сохраненных данных</td></tr>';
+            statsEl.innerHTML = '<p>Нет данных</p>';
+            tbody.innerHTML = '<tr><td colspan="7">Нет сохраненных данных</td></tr>';
             updateCharts();
             return;
         }
         
         const latest = experimentData[experimentData.length - 1];
         const day1 = experimentData[0];
-        
-        const totalF1False = experimentData.reduce((sum, d) => sum + d.f1.falseStarts, 0);
-        const totalHBFalse = experimentData.reduce((sum, d) => sum + d.hb.falseStarts, 0);
+        const totalF1FS = experimentData.reduce((sum, d) => sum + d.f1.falseStarts, 0);
+        const totalHBFS = experimentData.reduce((sum, d) => sum + d.hb.falseStarts, 0);
 
-        document.getElementById('latest-stats').innerHTML = `
+        statsEl.innerHTML = `
             <div class="stat-card overall">
-                <div>Общее Среднее (мс)</div>
-                <div class="stat-value">${latest.total.mean}</div>
+                <div>Общие показатели</div>
+                <div class="stat-value">Ср: ${latest.total.mean}</div>
+                <div class="stat-subtext">Мин: ${latest.total.min} | Макс: ${latest.total.max}</div>
                 ${getGrowthHTML(latest.total.mean, day1.total.mean)}
             </div>
             <div class="stat-card">
-                <div>Общий Минимум (мс)</div>
-                <div class="stat-value">${latest.total.min}</div>
-                ${getGrowthHTML(latest.total.min, day1.total.min)}
+                <div>Formula 1</div>
+                <div class="stat-value">Ср: ${latest.f1.mean}</div>
+                <div class="stat-subtext">Мин: ${latest.f1.min} | Макс: ${latest.f1.max}</div>
+                ${getGrowthHTML(latest.f1.mean, day1.f1.mean)}
             </div>
-            <div class="stat-card danger">
+            <div class="stat-card">
+                <div>Human Benchmark</div>
+                <div class="stat-value">Ср: ${latest.hb.mean}</div>
+                <div class="stat-subtext">Мин: ${latest.hb.min} | Макс: ${latest.hb.max}</div>
+                ${getGrowthHTML(latest.hb.mean, day1.hb.mean)}
+            </div>
+            <div class="stat-card" style="border-color: var(--danger)">
                 <div>Фальшстарты (Всего)</div>
-                <div class="stat-value">${totalF1False + totalHBFalse}</div>
-                <span class="growth">F1: ${totalF1False} | HB: ${totalHBFalse}</span>
+                <div class="stat-value">${totalF1FS + totalHBFS}</div>
+                <div class="stat-subtext">F1: ${totalF1FS} | HB: ${totalHBFS}</div>
             </div>
         `;
 
-        const tbody = document.getElementById('history-body');
         tbody.innerHTML = '';
         [...experimentData].reverse().forEach((d) => {
-            const actualIndex = d.day - 1;
+            const index = d.day - 1;
             tbody.innerHTML += `
                 <tr>
                     <td>${d.day}</td>
-                    <td><strong>${d.total.mean}</strong></td>
-                    <td>${d.total.min}</td>
-                    <td>${d.total.max}</td>
-                    <td>${d.f1.falseStarts}</td>
-                    <td>${d.hb.falseStarts}</td>
-                    <td>${d.osu ? '✅' : '❌'}</td>
-                    <td>${d.kovaaks ? '✅' : '❌'}</td>
+                    <td><strong>${d.total.mean}</strong> / ${d.total.min} / ${d.total.max}</td>
+                    <td>${d.f1.mean} / ${d.f1.min} / ${d.f1.max}</td>
+                    <td>${d.hb.mean} / ${d.hb.min} / ${d.hb.max}</td>
+                    <td>${d.f1.falseStarts} / ${d.hb.falseStarts}</td>
+                    <td>${d.osu ? '✅' : '❌'} / ${d.kovaaks ? '✅' : '❌'}</td>
                     <td>
-                        <button class="action-btn btn-warning" onclick="editDay(${actualIndex})">✎</button>
-                        <button class="action-btn btn-danger" onclick="deleteDay(${actualIndex})">✖</button>
+                        <button class="action-btn btn-warning" onclick="editDay(${index})">✎</button>
+                        <button class="action-btn btn-danger" onclick="deleteDay(${index})">✖</button>
                     </td>
                 </tr>
             `;
@@ -439,7 +519,14 @@
     }
 
     function updateCharts() {
-        const labels = experimentData.map(d => `День ${d.day}`);
+        if (experimentData.length === 0) return;
+
+        const style = getComputedStyle(document.documentElement);
+        const cText = style.getPropertyValue('--text-main').trim();
+        const cAcc1 = style.getPropertyValue('--accent-cyan').trim();
+        const cGrid = style.getPropertyValue('--border').trim();
+
+        const labels = experimentData.map(d => `Д${d.day}`);
         
         const ctxReaction = document.getElementById('reactionChart').getContext('2d');
         if (reactionChartInstance) reactionChartInstance.destroy();
@@ -448,15 +535,15 @@
             data: {
                 labels,
                 datasets: [
-                    { label: 'Общее Среднее', data: experimentData.map(d => d.total.mean), borderColor: '#66fcf1', backgroundColor: 'rgba(102, 252, 241, 0.1)', borderWidth: 3, fill: true, tension: 0.3 },
+                    { label: 'Общее Среднее', data: experimentData.map(d => d.total.mean), borderColor: cAcc1, backgroundColor: cAcc1+'33', borderWidth: 3, fill: true, tension: 0.3 },
                     { label: 'F1 Среднее', data: experimentData.map(d => d.f1.mean), borderColor: '#ff4c4c', borderWidth: 2, borderDash: [5, 5], tension: 0.3 },
                     { label: 'HB Среднее', data: experimentData.map(d => d.hb.mean), borderColor: '#4caf50', borderWidth: 2, borderDash: [5, 5], tension: 0.3 }
                 ]
             },
             options: {
-                responsive: true, maintainAspectRatio: false, color: '#c5c6c7',
-                scales: { y: { grid: { color: '#333' }, ticks: { color: '#c5c6c7' } }, x: { grid: { color: '#333' }, ticks: { color: '#c5c6c7' } } },
-                plugins: { legend: { labels: { color: '#c5c6c7' } } }
+                responsive: true, maintainAspectRatio: false, color: cText,
+                scales: { y: { grid: { color: cGrid }, ticks: { color: cText } }, x: { grid: { color: cGrid }, ticks: { color: cText } } },
+                plugins: { legend: { labels: { color: cText } } }
             }
         });
 
@@ -467,17 +554,17 @@
             data: {
                 labels,
                 datasets: [
-                    { label: 'F1 Фальшстарты', data: experimentData.map(d => d.f1.falseStarts), backgroundColor: '#ff4c4c' },
-                    { label: 'HB Фальшстарты', data: experimentData.map(d => d.hb.falseStarts), backgroundColor: '#4caf50' }
+                    { label: 'F1 ФС', data: experimentData.map(d => d.f1.falseStarts), backgroundColor: '#ff4c4c' },
+                    { label: 'HB ФС', data: experimentData.map(d => d.hb.falseStarts), backgroundColor: '#4caf50' }
                 ]
             },
             options: {
-                responsive: true, maintainAspectRatio: false, color: '#c5c6c7',
+                responsive: true, maintainAspectRatio: false, color: cText,
                 scales: { 
-                    y: { stacked: true, grid: { color: '#333' }, ticks: { color: '#c5c6c7', stepSize: 1 } }, 
-                    x: { stacked: true, grid: { color: '#333' }, ticks: { color: '#c5c6c7' } } 
+                    y: { stacked: true, grid: { color: cGrid }, ticks: { color: cText, stepSize: 1 } }, 
+                    x: { stacked: true, grid: { color: cGrid }, ticks: { color: cText } } 
                 },
-                plugins: { legend: { labels: { color: '#c5c6c7' } } }
+                plugins: { legend: { labels: { color: cText } } }
             }
         });
     }
