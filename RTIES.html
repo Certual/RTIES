@@ -12,10 +12,6 @@
             --accent-cyan: #66fcf1;
             --accent-teal: #45a29e;
             --text-main: #c5c6c7;
-            --text-light: #ffffff;
-            --danger: #ff4c4c;
-            --success: #4caf50;
-            --warning: #f1c40f;
             --border: #333333;
         }
 
@@ -24,7 +20,7 @@
             margin: 0;
             padding: 0;
             font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            transition: background-color 0.3s, color 0.3s, border-color 0.3s;
+            transition: background-color 0.2s, color 0.2s, border-color 0.2s;
         }
 
         body {
@@ -56,7 +52,7 @@
         }
 
         h1, h2, h3 {
-            color: var(--accent-cyan);
+            color: var(--text-main);
             margin-bottom: 15px;
             font-weight: 600;
         }
@@ -65,18 +61,18 @@
         .form-group label {
             display: block;
             margin-bottom: 5px;
-            color: var(--text-light);
+            color: var(--text-main);
             font-size: 0.9em;
         }
-        .form-group input[type="text"], .form-group input[type="number"], select {
+        .form-group input[type="text"], .form-group input[type="number"] {
             width: 100%;
             padding: 10px;
             background: rgba(0, 0, 0, 0.2);
             border: 1px solid var(--border);
-            color: var(--text-light);
+            color: var(--text-main);
             border-radius: 5px;
         }
-        .form-group input:focus, select:focus {
+        .form-group input:focus {
             border-color: var(--accent-cyan);
             outline: none;
         }
@@ -86,15 +82,15 @@
             align-items: center;
             gap: 10px;
             margin-bottom: 10px;
-            color: var(--text-light);
+            color: var(--text-main);
         }
 
         button {
             width: 100%;
             padding: 12px;
             background: transparent;
-            color: var(--accent-cyan);
-            border: 2px solid var(--accent-cyan);
+            color: var(--text-main);
+            border: 2px solid var(--border);
             border-radius: 5px;
             cursor: pointer;
             font-size: 1em;
@@ -103,13 +99,39 @@
         }
         button:hover {
             background: var(--accent-cyan);
+            border-color: var(--accent-cyan);
             color: var(--bg-color);
         }
-        .btn-danger { color: var(--danger); border-color: var(--danger); }
-        .btn-danger:hover { background: var(--danger); color: #fff; }
-        .btn-warning { color: var(--warning); border-color: var(--warning); }
-        .btn-warning:hover { background: var(--warning); color: #000; }
+        .btn-alt:hover {
+            background: var(--accent-teal);
+            border-color: var(--accent-teal);
+            color: var(--bg-color);
+        }
         .action-btn { padding: 5px 10px; font-size: 0.8em; margin: 0 2px; width: auto; }
+
+        .theme-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            background: rgba(0, 0, 0, 0.15);
+            padding: 15px;
+            border-radius: 5px;
+            border: 1px solid var(--border);
+        }
+        .color-picker-group {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.9em;
+        }
+        .color-picker-group input[type="color"] {
+            width: 40px;
+            height: 30px;
+            border: none;
+            padding: 0;
+            background: none;
+            cursor: pointer;
+        }
 
         .stats-grid {
             display: grid;
@@ -123,17 +145,16 @@
             border-radius: 8px;
             border: 1px solid var(--border);
         }
-        .stat-card.overall { border-color: var(--accent-teal); }
         .stat-value {
             font-size: 1.2em;
-            color: var(--text-light);
+            color: var(--text-main);
             font-weight: bold;
             margin: 5px 0;
         }
         .stat-subtext { font-size: 0.85em; opacity: 0.8; }
         .growth { font-size: 0.85em; display: block; margin-top: 5px; }
-        .growth.positive { color: var(--success); }
-        .growth.negative { color: var(--danger); }
+        .growth.positive { color: #4caf50; }
+        .growth.negative { color: #ff4c4c; }
 
         .chart-container {
             position: relative;
@@ -152,20 +173,7 @@
             text-align: center;
             border-bottom: 1px solid var(--border);
         }
-        .history-table th { color: var(--accent-cyan); }
-
-        #customThemeSettings {
-            display: none;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-            margin-top: 15px;
-            background: rgba(0,0,0,0.2);
-            padding: 15px;
-            border-radius: 5px;
-            border: 1px solid var(--border);
-        }
-        .color-picker-group { display: flex; justify-content: space-between; align-items: center; }
-        .color-picker-group input[type="color"] { width: 40px; height: 30px; border: none; padding: 0; background: none; cursor: pointer; }
+        .history-table th { color: var(--text-main); }
     </style>
 </head>
 <body>
@@ -173,29 +181,16 @@
 <div class="container">
     <div>
         <div class="panel">
-            <h2>Настройки темы</h2>
-            <select id="themeSelect" onchange="applyTheme()">
-                <option value="default">Default Dark</option>
-                <option value="materialDark">Material Dark</option>
-                <option value="materialLight">Material Light</option>
-                <option value="fluentDark">Fluent Dark</option>
-                <option value="fluentLight">Fluent Light</option>
-                <option value="dracula">Dracula</option>
-                <option value="nord">Nord</option>
-                <option value="solarized">Solarized Dark</option>
-                <option value="cyberpunk">Cyberpunk</option>
-                <option value="monokai">Monokai</option>
-                <option value="custom">Пользовательская</option>
-            </select>
-
-            <div id="customThemeSettings">
-                <div class="color-picker-group"><label>Фон:</label><input type="color" id="color-bg" onchange="updateCustomTheme()"></div>
-                <div class="color-picker-group"><label>Панели:</label><input type="color" id="color-panel" onchange="updateCustomTheme()"></div>
-                <div class="color-picker-group"><label>Акцент 1:</label><input type="color" id="color-accent1" onchange="updateCustomTheme()"></div>
-                <div class="color-picker-group"><label>Акцент 2:</label><input type="color" id="color-accent2" onchange="updateCustomTheme()"></div>
-                <div class="color-picker-group"><label>Текст:</label><input type="color" id="color-text" onchange="updateCustomTheme()"></div>
-                <div class="color-picker-group"><label>Границы:</label><input type="color" id="color-border" onchange="updateCustomTheme()"></div>
+            <h2>Настройка цветов сайта</h2>
+            <div class="theme-grid">
+                <div class="color-picker-group"><label>Фон сайта:</label><input type="color" id="color-bg" value="#0b0c10" onchange="updateTheme()"></div>
+                <div class="color-picker-group"><label>Фон панелей:</label><input type="color" id="color-panel" value="#1f2833" onchange="updateTheme()"></div>
+                <div class="color-picker-group"><label>Акцент 1 (F1):</label><input type="color" id="color-accent1" value="#66fcf1" onchange="updateTheme()"></div>
+                <div class="color-picker-group"><label>Акцент 2 (HB):</label><input type="color" id="color-accent2" value="#45a29e" onchange="updateTheme()"></div>
+                <div class="color-picker-group"><label>Текст:</label><input type="color" id="color-text" value="#c5c6c7" onchange="updateTheme()"></div>
+                <div class="color-picker-group"><label>Границы:</label><input type="color" id="color-border" value="#333333" onchange="updateTheme()"></div>
             </div>
+            <button onclick="resetTheme()" style="margin-top: 15px;">Сбросить цвета по умолчанию</button>
         </div>
 
         <div class="panel">
@@ -232,8 +227,8 @@
             </div>
 
             <button id="saveBtn" onclick="saveDay()">Сохранить результаты</button>
-            <button id="cancelEditBtn" class="btn-warning" style="display:none;" onclick="cancelEdit()">Отменить редактирование</button>
-            <button class="btn-danger" onclick="clearData()" style="margin-top: 20px;">Сбросить все данные</button>
+            <button id="cancelEditBtn" class="btn-alt" style="display:none;" onclick="cancelEdit()">Отменить редактирование</button>
+            <button onclick="clearData()" style="margin-top: 20px;">Сбросить все данные</button>
         </div>
     </div>
 
@@ -270,81 +265,66 @@
 </div>
 
 <script>
-    const themes = {
-        default: { bg: '#0b0c10', panel: '#1f2833', acc1: '#66fcf1', acc2: '#45a29e', text: '#c5c6c7', textL: '#ffffff', border: '#333333' },
-        materialDark: { bg: '#121212', panel: '#1e1e1e', acc1: '#bb86fc', acc2: '#03dac6', text: '#e0e0e0', textL: '#ffffff', border: '#333333' },
-        materialLight: { bg: '#fafafa', panel: '#ffffff', acc1: '#6200ee', acc2: '#03dac6', text: '#333333', textL: '#000000', border: '#e0e0e0' },
-        fluentDark: { bg: '#202020', panel: '#2b2b2b', acc1: '#60cdff', acc2: '#0078d4', text: '#cccccc', textL: '#ffffff', border: '#454545' },
-        fluentLight: { bg: '#f3f3f3', panel: '#ffffff', acc1: '#0078d4', acc2: '#005a9e', text: '#333333', textL: '#000000', border: '#e5e5e5' },
-        dracula: { bg: '#282a36', panel: '#44475a', acc1: '#ff79c6', acc2: '#bd93f9', text: '#f8f8f2', textL: '#ffffff', border: '#6272a4' },
-        nord: { bg: '#2e3440', panel: '#3b4252', acc1: '#88c0d0', acc2: '#8fbcbb', text: '#d8dee9', textL: '#eceff4', border: '#4c566a' },
-        solarized: { bg: '#002b36', panel: '#073642', acc1: '#2aa198', acc2: '#268bd2', text: '#93a1a1', textL: '#eee8d5', border: '#586e75' },
-        cyberpunk: { bg: '#fcee0a', panel: '#000000', acc1: '#00ff00', acc2: '#ff003c', text: '#ffffff', textL: '#fcee0a', border: '#ff003c' },
-        monokai: { bg: '#272822', panel: '#3e3d32', acc1: '#f92672', acc2: '#a6e22e', text: '#f8f8f2', textL: '#ffffff', border: '#75715e' }
+    const defaultTheme = {
+        bg: '#0b0c10',
+        panel: '#1f2833',
+        acc1: '#66fcf1',
+        acc2: '#45a29e',
+        text: '#c5c6c7',
+        border: '#333333'
     };
 
     let experimentData = JSON.parse(localStorage.getItem('reactionExperimentData')) || [];
-    let currentThemeConfig = JSON.parse(localStorage.getItem('reactionThemeConfig')) || { name: 'default', custom: themes.default };
+    let customTheme = JSON.parse(localStorage.getItem('reactionCustomTheme')) || defaultTheme;
     
     let reactionChartInstance = null;
     let falseStartsChartInstance = null;
     let editIndex = -1;
 
     function init() {
-        document.getElementById('themeSelect').value = currentThemeConfig.name;
-        applyTheme(true);
+        loadThemeInputs();
+        applyThemeCSS();
         resetForm();
         updateDashboard();
     }
 
-    function applyTheme(isInit = false) {
-        const select = document.getElementById('themeSelect');
-        const customSettings = document.getElementById('customThemeSettings');
-        const name = select.value;
-        
-        let colors;
-        if (name === 'custom') {
-            customSettings.style.display = 'grid';
-            colors = currentThemeConfig.custom;
-            if (isInit) {
-                document.getElementById('color-bg').value = colors.bg;
-                document.getElementById('color-panel').value = colors.panel;
-                document.getElementById('color-accent1').value = colors.acc1;
-                document.getElementById('color-accent2').value = colors.acc2;
-                document.getElementById('color-text').value = colors.text;
-                document.getElementById('color-border').value = colors.border;
-            }
-        } else {
-            customSettings.style.display = 'none';
-            colors = themes[name];
-        }
-
-        document.documentElement.style.setProperty('--bg-color', colors.bg);
-        document.documentElement.style.setProperty('--panel-bg', colors.panel);
-        document.documentElement.style.setProperty('--accent-cyan', colors.acc1);
-        document.documentElement.style.setProperty('--accent-teal', colors.acc2);
-        document.documentElement.style.setProperty('--text-main', colors.text);
-        document.documentElement.style.setProperty('--text-light', colors.textL || colors.text);
-        document.documentElement.style.setProperty('--border', colors.border);
-
-        currentThemeConfig.name = name;
-        if (name !== 'custom') currentThemeConfig.custom = colors;
-        localStorage.setItem('reactionThemeConfig', JSON.stringify(currentThemeConfig));
-
-        updateCharts();
+    function loadThemeInputs() {
+        document.getElementById('color-bg').value = customTheme.bg;
+        document.getElementById('color-panel').value = customTheme.panel;
+        document.getElementById('color-accent1').value = customTheme.acc1;
+        document.getElementById('color-accent2').value = customTheme.acc2;
+        document.getElementById('color-text').value = customTheme.text;
+        document.getElementById('color-border').value = customTheme.border;
     }
 
-    function updateCustomTheme() {
-        currentThemeConfig.custom = {
+    function updateTheme() {
+        customTheme = {
             bg: document.getElementById('color-bg').value,
             panel: document.getElementById('color-panel').value,
             acc1: document.getElementById('color-accent1').value,
             acc2: document.getElementById('color-accent2').value,
             text: document.getElementById('color-text').value,
-            textL: document.getElementById('color-text').value,
             border: document.getElementById('color-border').value
         };
-        applyTheme();
+        localStorage.setItem('reactionCustomTheme', JSON.stringify(customTheme));
+        applyThemeCSS();
+    }
+
+    function resetTheme() {
+        customTheme = { ...defaultTheme };
+        localStorage.setItem('reactionCustomTheme', JSON.stringify(customTheme));
+        loadThemeInputs();
+        applyThemeCSS();
+    }
+
+    function applyThemeCSS() {
+        document.documentElement.style.setProperty('--bg-color', customTheme.bg);
+        document.documentElement.style.setProperty('--panel-bg', customTheme.panel);
+        document.documentElement.style.setProperty('--accent-cyan', customTheme.acc1);
+        document.documentElement.style.setProperty('--accent-teal', customTheme.acc2);
+        document.documentElement.style.setProperty('--text-main', customTheme.text);
+        document.documentElement.style.setProperty('--border', customTheme.border);
+        updateCharts();
     }
 
     function calculateStats(arr) {
@@ -459,7 +439,7 @@
         const tbody = document.getElementById('history-body');
 
         if (experimentData.length === 0) {
-            statsEl.innerHTML = '<p>Нет данных</p>';
+            statsEl.innerHTML = '<p>Нет сохраненных данных</p>';
             tbody.innerHTML = '<tr><td colspan="7">Нет сохраненных данных</td></tr>';
             updateCharts();
             return;
@@ -471,7 +451,7 @@
         const totalHBFS = experimentData.reduce((sum, d) => sum + d.hb.falseStarts, 0);
 
         statsEl.innerHTML = `
-            <div class="stat-card overall">
+            <div class="stat-card">
                 <div>Общие показатели</div>
                 <div class="stat-value">Ср: ${latest.total.mean}</div>
                 <div class="stat-subtext">Мин: ${latest.total.min} | Макс: ${latest.total.max}</div>
@@ -489,7 +469,7 @@
                 <div class="stat-subtext">Мин: ${latest.hb.min} | Макс: ${latest.hb.max}</div>
                 ${getGrowthHTML(latest.hb.mean, day1.hb.mean)}
             </div>
-            <div class="stat-card" style="border-color: var(--danger)">
+            <div class="stat-card">
                 <div>Фальшстарты (Всего)</div>
                 <div class="stat-value">${totalF1FS + totalHBFS}</div>
                 <div class="stat-subtext">F1: ${totalF1FS} | HB: ${totalHBFS}</div>
@@ -508,8 +488,8 @@
                     <td>${d.f1.falseStarts} / ${d.hb.falseStarts}</td>
                     <td>${d.osu ? '✅' : '❌'} / ${d.kovaaks ? '✅' : '❌'}</td>
                     <td>
-                        <button class="action-btn btn-warning" onclick="editDay(${index})">✎</button>
-                        <button class="action-btn btn-danger" onclick="deleteDay(${index})">✖</button>
+                        <button class="action-btn btn-alt" onclick="editDay(${index})">✎</button>
+                        <button class="action-btn" onclick="deleteDay(${index})">✖</button>
                     </td>
                 </tr>
             `;
@@ -524,6 +504,7 @@
         const style = getComputedStyle(document.documentElement);
         const cText = style.getPropertyValue('--text-main').trim();
         const cAcc1 = style.getPropertyValue('--accent-cyan').trim();
+        const cAcc2 = style.getPropertyValue('--accent-teal').trim();
         const cGrid = style.getPropertyValue('--border').trim();
 
         const labels = experimentData.map(d => `Д${d.day}`);
@@ -535,9 +516,9 @@
             data: {
                 labels,
                 datasets: [
-                    { label: 'Общее Среднее', data: experimentData.map(d => d.total.mean), borderColor: cAcc1, backgroundColor: cAcc1+'33', borderWidth: 3, fill: true, tension: 0.3 },
-                    { label: 'F1 Среднее', data: experimentData.map(d => d.f1.mean), borderColor: '#ff4c4c', borderWidth: 2, borderDash: [5, 5], tension: 0.3 },
-                    { label: 'HB Среднее', data: experimentData.map(d => d.hb.mean), borderColor: '#4caf50', borderWidth: 2, borderDash: [5, 5], tension: 0.3 }
+                    { label: 'Общее Среднее', data: experimentData.map(d => d.total.mean), borderColor: cText, backgroundColor: cText+'33', borderWidth: 3, fill: true, tension: 0.3 },
+                    { label: 'F1 Среднее', data: experimentData.map(d => d.f1.mean), borderColor: cAcc1, borderWidth: 2, borderDash: [5, 5], tension: 0.3 },
+                    { label: 'HB Среднее', data: experimentData.map(d => d.hb.mean), borderColor: cAcc2, borderWidth: 2, borderDash: [5, 5], tension: 0.3 }
                 ]
             },
             options: {
@@ -554,8 +535,8 @@
             data: {
                 labels,
                 datasets: [
-                    { label: 'F1 ФС', data: experimentData.map(d => d.f1.falseStarts), backgroundColor: '#ff4c4c' },
-                    { label: 'HB ФС', data: experimentData.map(d => d.hb.falseStarts), backgroundColor: '#4caf50' }
+                    { label: 'F1 ФС', data: experimentData.map(d => d.f1.falseStarts), backgroundColor: cAcc1 },
+                    { label: 'HB ФС', data: experimentData.map(d => d.hb.falseStarts), backgroundColor: cAcc2 }
                 ]
             },
             options: {
