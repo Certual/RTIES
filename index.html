@@ -315,7 +315,13 @@
 
     <div class="col col-right">
         <div class="panel panel-auto">
-            <h2>Статистика (Последний день)</h2>
+            <div class="form-header">
+                <h2>Статистика</h2>
+                <div style="display: flex; gap: 10px;">
+                    <select id="target-day-select" onchange="updateDashboard()" style="background: rgba(0,0,0,0.2); color: var(--text-main); border: 1px solid var(--border); padding: 5px 10px; border-radius: 5px; font-size: 0.85em; cursor: pointer;"></select>
+                    <select id="compare-day-select" onchange="updateDashboard()" style="background: rgba(0,0,0,0.2); color: var(--text-main); border: 1px solid var(--border); padding: 5px 10px; border-radius: 5px; font-size: 0.85em; cursor: pointer;"></select>
+                </div>
+            </div>
             <div class="stats-grid" id="latest-stats"></div>
             
             <div class="charts-row">
@@ -717,12 +723,12 @@
         }
     }
 
-    function getGrowthHTML(current, initial) {
-        if (!initial) return '';
+    function getGrowthHTML(current, initial, label = 'от Дня 1') {
+        if (initial === undefined || initial === null || isNaN(initial)) return '';
         const percent = ((current - initial) / initial) * 100;
         const cls = percent <= 0 ? 'positive' : 'negative'; 
         const prefix = percent > 0 ? '+' : '';
-        return `<span class="growth ${cls}">${prefix}${percent.toFixed(2)}% от Дня 1</span>`;
+        return `<span class="growth ${cls}">${prefix}${percent.toFixed(2)}% ${label}</span>`;
     }
 
     function updateCurrentRank(latestMean) {
@@ -761,46 +767,87 @@
         const statsEl = document.getElementById('latest-stats');
         const tbody = document.getElementById('history-body');
 
+        const targetSel = document.getElementById('target-day-select');
+        const compareSel = document.getElementById('compare-day-select');
+
         if (experimentData.length === 0) {
+            if (targetSel) targetSel.innerHTML = '';
+            if (compareSel) compareSel.innerHTML = '';
             statsEl.innerHTML = '<p style="color: var(--text-main); grid-column: 1/-1; text-align: center;">Нет сохраненных данных</p>';
             tbody.innerHTML = '<tr><td colspan="7">Нет сохраненных данных</td></tr>';
             updateCurrentRank(null);
             updateCharts();
             return;
         }
-        
-        const latest = experimentData[experimentData.length - 1];
-        const day1 = experimentData[0];
+
+        if (targetSel && compareSel) {
+            const currentTargetVal = targetSel.value;
+            const currentCompareVal = compareSel.value;
+
+            if (targetSel.options.length !== experimentData.length) {
+                let targetOpts = '';
+                let compareOpts = '';
+                experimentData.forEach((d, idx) => {
+                    targetOpts += `<option value="${idx}">Просмотр: День ${d.day}</option>`;
+                    compareOpts += `<option value="${idx}">Сравнение: День ${d.day}</option>`;
+                });
+                targetSel.innerHTML = targetOpts;
+                compareSel.innerHTML = compareOpts;
+
+                if (currentTargetVal !== '' && parseInt(currentTargetVal, 10) < experimentData.length) {
+                    targetSel.value = currentTargetVal;
+                } else {
+                    targetSel.value = experimentData.length - 1;
+                }
+
+                if (currentCompareVal !== '' && parseInt(currentCompareVal, 10) < experimentData.length) {
+                    compareSel.value = currentCompareVal;
+                } else {
+                    compareSel.value = 0;
+                }
+            }
+        }
+
+        let targetIdx = targetSel && targetSel.value !== '' ? parseInt(targetSel.value, 10) : experimentData.length - 1;
+        let compareIdx = compareSel && compareSel.value !== '' ? parseInt(compareSel.value, 10) : 0;
+
+        if (isNaN(targetIdx) || targetIdx >= experimentData.length) targetIdx = experimentData.length - 1;
+        if (isNaN(compareIdx) || compareIdx >= experimentData.length) compareIdx = 0;
+
+        const latest = experimentData[targetIdx];
+        const compareTarget = experimentData[compareIdx];
+
+        const label = `от Дня ${compareTarget.day}`;
         const totalF1FS = experimentData.reduce((sum, d) => sum + d.f1.falseStarts, 0);
         const totalHBFS = experimentData.reduce((sum, d) => sum + d.hb.falseStarts, 0);
 
         statsEl.innerHTML = `
             <div class="stat-card">
-                <div>Общие показатели</div>
+                <div>Общие показатели (День ${latest.day})</div>
                 <div class="stat-value">Ср: <span class="copyable" title="Нажмите, чтобы скопировать" onclick="copyVal('${latest.total.mean}', this)">${latest.total.mean}</span>мс</div>
                 <div class="stat-subtext">
                     Мин: <span class="copyable" title="Нажмите, чтобы скопировать" onclick="copyVal('${latest.total.min}', this)">${latest.total.min}</span>мс | 
                     Макс: <span class="copyable" title="Нажмите, чтобы скопировать" onclick="copyVal('${latest.total.max}', this)">${latest.total.max}</span>мс
                 </div>
-                ${getGrowthHTML(latest.total.mean, day1.total.mean)}
+                ${getGrowthHTML(latest.total.mean, compareTarget.total.mean, label)}
             </div>
             <div class="stat-card">
-                <div>Formula 1</div>
+                <div>Formula 1 (День ${latest.day})</div>
                 <div class="stat-value">Ср: <span class="copyable" title="Нажмите, чтобы скопировать" onclick="copyVal('${latest.f1.mean}', this)">${latest.f1.mean}</span>мс</div>
                 <div class="stat-subtext">
                     Мин: <span class="copyable" title="Нажмите, чтобы скопировать" onclick="copyVal('${latest.f1.min}', this)">${latest.f1.min}</span>мс | 
                     Макс: <span class="copyable" title="Нажмите, чтобы скопировать" onclick="copyVal('${latest.f1.max}', this)">${latest.f1.max}</span>мс
                 </div>
-                ${getGrowthHTML(latest.f1.mean, day1.f1.mean)}
+                ${getGrowthHTML(latest.f1.mean, compareTarget.f1.mean, label)}
             </div>
             <div class="stat-card">
-                <div>Human Benchmark</div>
+                <div>Human Benchmark (День ${latest.day})</div>
                 <div class="stat-value">Ср: <span class="copyable" title="Нажмите, чтобы скопировать" onclick="copyVal('${latest.hb.mean}', this)">${latest.hb.mean}</span>мс</div>
                 <div class="stat-subtext">
                     Мин: <span class="copyable" title="Нажмите, чтобы скопировать" onclick="copyVal('${latest.hb.min}', this)">${latest.hb.min}</span>мс | 
                     Макс: <span class="copyable" title="Нажмите, чтобы скопировать" onclick="copyVal('${latest.hb.max}', this)">${latest.hb.max}</span>мс
                 </div>
-                ${getGrowthHTML(latest.hb.mean, day1.hb.mean)}
+                ${getGrowthHTML(latest.hb.mean, compareTarget.hb.mean, label)}
             </div>
             <div class="stat-card">
                 <div>Фальшстарты (Всего)</div>
@@ -809,7 +856,7 @@
                     F1: <span class="copyable" title="Нажмите, чтобы скопировать" onclick="copyVal('${totalF1FS}', this)">${totalF1FS}</span> | 
                     HB: <span class="copyable" title="Нажмите, чтобы скопировать" onclick="copyVal('${totalHBFS}', this)">${totalHBFS}</span>
                 </div>
-                ${getGrowthHTML(totalF1FS + totalHBFS, day1.f1.falseStarts + day1.hb.falseStarts)}
+                ${getGrowthHTML(latest.f1.falseStarts + latest.hb.falseStarts, compareTarget.f1.falseStarts + compareTarget.hb.falseStarts, label)}
             </div>
         `;
 
