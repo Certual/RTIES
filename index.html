@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Эксперимент: Скорость реакции</title>
-    <script src="chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
             --bg-color: #0b0c10;
@@ -155,7 +155,7 @@
         .color-picker-group input[type="color"] { width: 40px; height: 30px; border: none; padding: 0; background: none; cursor: pointer; }
 
         .stats-grid {
-            display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
             gap: 15px; margin-bottom: 15px; flex-shrink: 0;
         }
         .stat-card { background: rgba(0,0,0,0.15); padding: 15px; border-radius: 8px; border: 1px solid var(--border); }
@@ -185,7 +185,7 @@
             margin: 0 -20px; padding: 0 20px;
         }
         .history-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 0.85em; }
-        .history-table th, .history-table td { padding: 10px; text-align: center; border-bottom: 1px solid var(--border); }
+        .history-table th, .history-table td { padding: 10px; text-align: center; border-bottom: 1px solid var(--border); resize: both; overflow: auto; position: relative; }
         
         .history-table th {
             position: sticky; top: 0; background-color: var(--panel-bg);
@@ -231,13 +231,65 @@
         .close-modal:hover { color: var(--accent-cyan); background: none; border: none; }
         
         .modal-body { color: var(--text-main); font-size: 0.95em; overflow-y: auto; flex: 1; padding-right: 5px; }
-        .modal-section { margin-bottom: 20px; }
-        .modal-section h2 { color: var(--text-main); font-size: 1.1em; border-bottom: none; margin-bottom: 12px; }
+        .modal-section { margin-bottom: 20px; background: rgba(0,0,0,0.1); padding: 15px; border-radius: 8px; border: 1px solid var(--border); position: relative; }
+        .modal-section h2 { color: var(--text-main); font-size: 1.1em; border-bottom: none; margin-bottom: 12px; outline: none; }
+        .modal-section h2[contenteditable="true"]:hover { border-bottom: 1px dashed var(--accent-cyan); }
         .modal-section ul { list-style-type: none; margin-left: 10px; }
         .modal-section li { position: relative; padding-left: 15px; margin-bottom: 5px; }
         .modal-section li::before { content: '•'; color: var(--accent-teal); position: absolute; left: 0; font-weight: bold; }
         .modal-section li strong { color: var(--accent-cyan); }
         .status-optional { color: #f1c40f; font-weight: bold; }
+
+        .section-controls {
+            display: none; gap: 5px; margin-bottom: 10px; justify-content: flex-end; flex-wrap: wrap;
+        }
+        .edit-mode-active .section-controls {
+            display: flex;
+        }
+        .section-controls button {
+            width: auto; padding: 3px 8px; font-size: 0.8em; margin: 0;
+        }
+
+        /* Independent Sidebars for Edit Mode */
+        .edit-sidebar {
+            position: fixed;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 220px;
+            background: var(--panel-bg);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 15px;
+            display: none;
+            flex-direction: column;
+            gap: 12px;
+            z-index: 105;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+            max-height: 85vh;
+            overflow-y: auto;
+        }
+        .edit-sidebar.active {
+            display: flex;
+        }
+        #edit-sidebar-left { left: 20px; }
+        #edit-sidebar-right { right: 20px; }
+
+        .edit-sidebar h3 {
+            font-size: 0.95em;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 5px;
+            margin-bottom: 5px;
+            color: var(--accent-cyan);
+        }
+
+        /* Cell selection highlight in Edit Mode */
+        .edit-mode-cells td, .edit-mode-cells th {
+            cursor: pointer;
+        }
+        .edit-mode-cells td.selected-cell, .edit-mode-cells th.selected-cell {
+            background-color: rgba(102, 252, 241, 0.25) !important;
+            outline: 2px solid var(--accent-cyan);
+        }
 
         .toast {
             position: fixed; top: 20px; right: 20px;
@@ -249,6 +301,113 @@
             pointer-events: none;
         }
         .toast.show { opacity: 1; transform: translateX(0); }
+
+        /* Test Window Styles - Instant transitions */
+        #test-modal-content {
+            width: 100vw; height: 100vh; max-width: none; border-radius: 0; border: none;
+            display: flex; flex-direction: column; padding: 0; background: var(--bg-color);
+        }
+        .test-header {
+            display: flex; justify-content: space-between; align-items: center; padding: 15px 25px;
+            background: var(--panel-bg); z-index: 100; border-bottom: 1px solid var(--border); flex-shrink: 0;
+        }
+        .test-area {
+            flex: 1; display: flex; justify-content: center; align-items: center; flex-direction: column;
+            cursor: pointer; font-size: 3em; font-weight: bold; 
+            transition: none !important; 
+            position: relative; user-select: none; color: #fff; text-align: center;
+        }
+        .f1-lights-container { display: none; gap: 2vw; margin-bottom: 20px; }
+        
+        /* F1 Mode fixed layout so traffic lights remain strictly static and never move */
+        .test-area.f1-mode {
+            justify-content: flex-start;
+        }
+        .test-area.f1-mode .f1-lights-container {
+            display: flex;
+            position: absolute;
+            top: 35%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            margin-bottom: 0;
+        }
+        .test-area.f1-mode .test-text-wrap {
+            position: absolute;
+            top: 55%;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100%;
+        }
+
+        .test-text-wrap {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .f1-light { width: 8vw; height: 8vw; max-width: 120px; max-height: 120px; border-radius: 50%; background: #333; border: 4px solid #111; transition: none !important; }
+        .f1-light.on { background: #ff4c4c; box-shadow: 0 0 30px #ff4c4c; }
+        .hide-text:not(.finished) .test-text, .hide-text:not(.finished) .test-subtext { opacity: 0 !important; }
+        .test-subtext { font-size: 0.3em; margin-top: 10px; font-weight: normal; opacity: 0.7; }
+        .test-active-btn { background: var(--accent-cyan) !important; color: var(--bg-color) !important; font-weight: bold; }
+
+        .test-session-info {
+            position: absolute;
+            bottom: 20px;
+            background: rgba(0,0,0,0.5);
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 0.4em;
+            border: 1px solid var(--border);
+        }
+        .hide-session-info #test-session-info {
+            display: none !important;
+        }
+
+        .test-top-trigger {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 30px;
+            z-index: 105;
+            display: none;
+        }
+        .hide-header .test-top-trigger {
+            display: block;
+        }
+        .hide-header .test-header {
+            opacity: 0;
+            pointer-events: none;
+            transform: translateY(-100%);
+            transition: opacity 0.3s, transform 0.3s;
+            position: absolute;
+            width: 100%;
+            top: 0;
+            left: 0;
+            z-index: 100;
+        }
+        .hide-header .test-top-trigger:hover ~ .test-header,
+        .hide-header .test-header:hover {
+            opacity: 1;
+            pointer-events: auto;
+            transform: translateY(0);
+        }
+
+        @media (max-width: 1400px) {
+            .edit-sidebar {
+                position: static;
+                width: 100%;
+                transform: none;
+                margin-top: 10px;
+            }
+            .modal-overlay.open {
+                flex-direction: column;
+                overflow-y: auto;
+                padding: 10px;
+            }
+        }
 
         @media (max-width: 1200px) {
             body { height: auto; overflow: visible; }
@@ -269,12 +428,15 @@
         <div class="panel panel-flex">
             <div class="form-header">
                 <h2 id="formTitle">Ввод данных за День <span id="currentDayLabel">1</span></h2>
-                <button class="options-btn" onclick="openRegulations()">⚙ Опции</button>
+                <div>
+                    <button class="options-btn" onclick="openTestWindow()">⏱ Тесты</button>
+                    <button class="options-btn" onclick="openRegulations()">⚙ Опции</button>
+                </div>
             </div>
             
             <div class="form-scroll-area">
                 <div class="form-group">
-                    <label>Formula 1 (25 результатов):</label>
+                    <label>Formula 1 (5 усредненных):</label>
                     <input type="text" id="f1-results" class="form-input-watch" placeholder="Напр: 210 215 205...">
                 </div>
                 <div class="form-group">
@@ -295,13 +457,17 @@
 
                 <hr style="border-color: var(--border); margin:15px 0;">
 
-                <div class="checkbox-group">
-                    <input type="checkbox" id="osu-done">
-                    <label for="osu-done">Osu HRDTHD (30 мин) (Опционально)</label>
+                <div id="dynamic-tasks-list"></div>
+                <div style="display:flex; gap:10px; margin-bottom:15px;">
+                    <input type="text" id="new-task-input" placeholder="Новый пункт..." style="flex:1; padding:8px; background:rgba(0,0,0,0.2); border:1px solid var(--border); color:var(--text-main); border-radius:5px; font-size:0.9em;">
+                    <button onclick="addTask()" style="width:auto; padding:8px 15px; margin:0;">Добавить</button>
                 </div>
-                <div class="checkbox-group">
-                    <input type="checkbox" id="kovaaks-done">
-                    <label for="kovaaks-done">Kovaak's (30 мин)</label>
+
+                <hr style="border-color: var(--border); margin:15px 0;">
+
+                <div class="checkbox-group" style="background: rgba(241, 196, 15, 0.1); padding: 10px; border-radius: 5px; border: 1px solid rgba(241, 196, 15, 0.3);">
+                    <input type="checkbox" id="is-weekend">
+                    <label for="is-weekend" style="color: #f1c40f; font-weight: bold; margin-bottom: 0;">Выходной день (не учитывать в статистике)</label>
                 </div>
             </div>
 
@@ -326,11 +492,11 @@
             
             <div class="charts-row">
                 <div class="chart-col">
-                    <h2>Динамика показателей</h2>
+                    <h2>Динамика показателей (Активные дни)</h2>
                     <div class="chart-container"><canvas id="reactionChart"></canvas></div>
                 </div>
                 <div class="chart-col">
-                    <h2>Фальшстарты</h2>
+                    <h2>Фальшстарты (Активные дни)</h2>
                     <div class="chart-container"><canvas id="falseStartsChart"></canvas></div>
                 </div>
             </div>
@@ -343,11 +509,12 @@
                     <thead>
                         <tr>
                             <th>День</th>
+                            <th>Тип</th>
                             <th>Общее (Ср / Мин / Макс)</th>
                             <th>F1 (Ср / Мин / Макс)</th>
                             <th>HB (Ср / Мин / Макс)</th>
                             <th>ФС (F1/HB)</th>
-                            <th>Osu / Kovaak's</th>
+                            <th>Задачи</th>
                             <th>Действия</th>
                         </tr>
                     </thead>
@@ -358,11 +525,83 @@
     </div>
 </div>
 
+<div class="modal-overlay" id="testModalOverlay">
+    <div class="modal-content" id="test-modal-content">
+        <div class="test-top-trigger" id="testTopTrigger"></div>
+        <div class="test-header">
+            <div style="display: flex; gap: 10px;">
+                <button class="options-btn test-active-btn" id="btn-test-1" onclick="setTestType(1)">Human Benchmark</button>
+                <button class="options-btn" id="btn-test-2" onclick="setTestType(2)">Валттери Ботта (F1)</button>
+                <button class="options-btn" id="btn-test-3" onclick="setTestType(3)">Синий цвет (No-Go)</button>
+            </div>
+            <div style="display:flex; gap:15px; align-items:center; flex-wrap: wrap;">
+                <label style="display:flex; align-items:center; gap:5px; cursor:pointer;">
+                    <input type="checkbox" id="hide-test-text" onchange="toggleTestText()"> Скрыть текст
+                </label>
+                <label style="display:flex; align-items:center; gap:5px; cursor:pointer;">
+                    <input type="checkbox" id="hide-test-session-info" onchange="toggleTestSessionInfo()"> Скрыть попытки в серии
+                </label>
+                <label style="display:flex; align-items:center; gap:5px; cursor:pointer;">
+                    <input type="checkbox" id="hide-test-header" onchange="toggleTestHeader()"> Скрыть панель
+                </label>
+                <button class="options-btn" onclick="toggleTestFullscreen()">⛶ Полный экран</button>
+                <button class="btn-danger options-btn" onclick="closeTestWindow()">✖ Закрыть</button>
+            </div>
+        </div>
+        <div class="test-area" id="test-area" onmousedown="handleTestClick()">
+            <div class="f1-lights-container" id="f1-lights">
+                <div class="f1-light"></div>
+                <div class="f1-light"></div>
+                <div class="f1-light"></div>
+                <div class="f1-light"></div>
+                <div class="f1-light"></div>
+            </div>
+            <div class="test-text-wrap" id="test-text-wrap">
+                <span class="test-text" id="test-message">Нажмите чтобы начать</span>
+                <span class="test-subtext" id="test-submessage"></span>
+            </div>
+            <div class="test-session-info" id="test-session-info">Попытка: 0/5 в текущей серии [] | Накоплено усредненных (0/5): []</div>
+        </div>
+    </div>
+</div>
+
 <div class="modal-overlay" id="modalOverlay" onclick="closeRegulationsOnOverlay(event)">
-    <div class="modal-content">
+    <!-- Left Edit Sidebar -->
+    <div class="edit-sidebar" id="edit-sidebar-left">
+        <h3>Управление структурой</h3>
+        <button class="options-btn" onclick="addRegulationSection()">+ Добавить пункт</button>
+        <div style="font-size:0.85em; opacity:0.8; margin-top:5px;">
+            Используйте кнопки в карточках разделов для добавления таблиц, текста или картинок.
+        </div>
+    </div>
+
+    <!-- Right Edit Sidebar -->
+    <div class="edit-sidebar" id="edit-sidebar-right">
+        <h3>Инструменты ячеек</h3>
+        <div id="selected-cells-count" style="font-size:0.85em; color:var(--accent-cyan); font-weight:bold; margin-bottom:5px;">Выделено ячеек: 0</div>
+        <div style="display:flex; flex-direction:column; gap:5px;">
+            <label style="font-size:0.85em;">Цвет текста:</label>
+            <input type="color" id="textColorPicker" value="#66fcf1" style="width:100%; height:30px; border:none; background:none; cursor:pointer;">
+            <button class="options-btn" onclick="formatSelectedTextColor()">Применить цвет текста</button>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:5px; margin-top:10px;">
+            <label style="font-size:0.85em;">Цвет ячейки:</label>
+            <input type="color" id="tableColorPicker" value="#1f2833" style="width:100%; height:30px; border:none; background:none; cursor:pointer;">
+            <button class="options-btn" onclick="formatSelectedTableColor()">Применить цвет ячейки</button>
+        </div>
+        <button class="options-btn" onclick="mergeSelectedCells()" style="margin-top:10px;">🔗 Соединить ячейки</button>
+        <div style="font-size:0.8em; opacity:0.8; margin-top:5px;">
+            В режиме редактирования кликайте по ячейкам таблиц для их выделения.
+        </div>
+    </div>
+
+    <div class="modal-content" id="regulationsModalContent">
         <div class="modal-header">
             <h1>ОПЦИИ И РЕГЛАМЕНТ</h1>
-            <button class="close-modal" onclick="closeRegulations()">×</button>
+            <div style="display:flex; gap:10px; align-items:center;">
+                <button class="options-btn" id="editModeToggleBtn" onclick="toggleEditMode()">✏ Редактирование: ВЫКЛ</button>
+                <button class="close-modal" onclick="closeRegulations()">×</button>
+            </div>
         </div>
         <div class="modal-body col-left">
             
@@ -370,92 +609,144 @@
                 Общий ранг (за сегодня): <span>Нет данных</span>
             </div>
 
-            <div class="modal-section">
-                <h2>1. ОБЩИЕ НОРМЫ И ТРЕБОВАНИЯ</h2>
-                <table class="history-table">
-                    <thead>
-                        <tr>
-                            <th>Параметр</th>
-                            <th>Норматив</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr><td><strong>Дневной минимум</strong></td><td>50 зарегистрированных тестов реакции</td></tr>
-                        <tr><td><strong>Регулярность</strong></td><td>Пропускать дни категорически ЗАПРЕЩЕНО</td></tr>
-                        <tr><td><strong>Сверхнорма</strong></td><td>Не учитывается в общей статистике</td></tr>
-                    </tbody>
-                </table>
-            </div>
+            <div id="regulations-sections-container">
+                <div class="modal-section" id="reg-section-1">
+                    <div class="section-controls">
+                        <button class="options-btn" onclick="moveSection(this, -1)">▲</button>
+                        <button class="options-btn" onclick="moveSection(this, 1)">▼</button>
+                        <button class="btn-danger options-btn" onclick="removeSection(this)">✖</button>
+                        <button class="options-btn" onclick="addSectionContent(this, 'table')">+ Таблица</button>
+                        <button class="options-btn" onclick="addSectionContent(this, 'text')">+ Текст</button>
+                        <button class="options-btn" onclick="addSectionContent(this, 'image')">+ Картинка</button>
+                    </div>
+                    <h2 contenteditable="false" onblur="saveRegulationsData()">1. ОБЩИЕ НОРМЫ И ТРЕБОВАНИЯ</h2>
+                    <div class="reg-content-area" contenteditable="false" onblur="saveRegulationsData()">
+                        <table class="history-table">
+                            <thead>
+                                <tr>
+                                    <th>Параметр</th>
+                                    <th>Норматив</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr><td><strong>Дневной минимум</strong></td><td>50 зарегистрированных тестов реакции[cite: 6]</td></tr>
+                                <tr><td><strong>Регулярность</strong></td><td>Пропускать дни категорически ЗАПРЕЩЕНО</td></tr>
+                                <tr><td><strong>Сверхнорма</strong></td><td>Не учитывается в общей статистике</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
 
-            <div class="modal-section">
-                <h2>2. ПОРЯДОК ПРОВЕДЕНИЯ ТЕСТОВ</h2>
-                <table class="history-table">
-                    <thead>
-                        <tr>
-                            <th>Тест</th>
-                            <th>Спецификация</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr><td><strong>Formula 1</strong></td><td>25 попыток без промежуточного усреднения (прямой учет)</td></tr>
-                        <tr><td><strong>Human Benchmark</strong></td><td>25 попыток (5 промежуточно усредненных блоков)</td></tr>
-                        <tr><td><strong>Расчет</strong></td><td>Среднее, минимум и максимум на основе двух дисциплин</td></tr>
-                    </tbody>
-                </table>
-            </div>
+                <div class="modal-section" id="reg-section-2">
+                    <div class="section-controls">
+                        <button class="options-btn" onclick="moveSection(this, -1)">▲</button>
+                        <button class="options-btn" onclick="moveSection(this, 1)">▼</button>
+                        <button class="btn-danger options-btn" onclick="removeSection(this)">✖</button>
+                        <button class="options-btn" onclick="addSectionContent(this, 'table')">+ Таблица</button>
+                        <button class="options-btn" onclick="addSectionContent(this, 'text')">+ Текст</button>
+                        <button class="options-btn" onclick="addSectionContent(this, 'image')">+ Картинка</button>
+                    </div>
+                    <h2 contenteditable="false" onblur="saveRegulationsData()">2. ПОРЯДОК ПРОВЕДЕНИЯ ТЕСТОВ</h2>
+                    <div class="reg-content-area" contenteditable="false" onblur="saveRegulationsData()">
+                        <table class="history-table">
+                            <thead>
+                                <tr>
+                                    <th>Тест</th>
+                                    <th>Спецификация</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr><td><strong>Formula 1</strong></td><td>5 попыток с промежуточным усреднением (блочный учет)[cite: 6]</td></tr>
+                                <tr><td><strong>Human Benchmark</strong></td><td>5 попыток (усредненный блок)[cite: 6]</td></tr>
+                                <tr><td><strong>Расчет</strong></td><td>Среднее, минимум и максимум на основе двух дисциплин[cite: 6]</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
 
-            <div class="modal-section">
-                <h2>3. ДНЕВНАЯ НОРМА OSU! И KOVAAK'S</h2>
-                <table class="history-table">
-                    <thead>
-                        <tr>
-                            <th>Дисциплина</th>
-                            <th>Требования</th>
-                            <th>Статус</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr><td><strong>Osu! HRDTHD</strong></td><td>Сессия от 30 мин (AR &gt; 11, не ниже 11)</td><td><span class="status-optional">Опционально</span></td></tr>
-                        <tr><td><strong>Kovaak's</strong></td><td>Плейлист Reactive Tracking от 30 мин</td><td>Обязательно</td></tr>
-                    </tbody>
-                </table>
-            </div>
+                <div class="modal-section" id="reg-section-3">
+                    <div class="section-controls">
+                        <button class="options-btn" onclick="moveSection(this, -1)">▲</button>
+                        <button class="options-btn" onclick="moveSection(this, 1)">▼</button>
+                        <button class="btn-danger options-btn" onclick="removeSection(this)">✖</button>
+                        <button class="options-btn" onclick="addSectionContent(this, 'table')">+ Таблица</button>
+                        <button class="options-btn" onclick="addSectionContent(this, 'text')">+ Текст</button>
+                        <button class="options-btn" onclick="addSectionContent(this, 'image')">+ Картинка</button>
+                    </div>
+                    <h2 contenteditable="false" onblur="saveRegulationsData()">3. ДНЕВНАЯ НОРМА OSU! И KOVAAK'S</h2>
+                    <div class="reg-content-area" contenteditable="false" onblur="saveRegulationsData()">
+                        <table class="history-table">
+                            <thead>
+                                <tr>
+                                    <th>Дисциплина</th>
+                                    <th>Требования</th>
+                                    <th>Статус</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr><td><strong>Osu! HRDTHD</strong></td><td>Сессия от 30 мин (AR &gt; 11, не ниже 11)</td><td><span class="status-optional">Опционально</span></td></tr>
+                                <tr><td><strong>Kovaak's</strong></td><td>Плейлист Reactive Tracking от 30 мин</td><td>Обязательно</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
 
-            <div class="modal-section">
-                <h2>4. СРОКИ И ОТРАБОТКИ</h2>
-                <table class="history-table">
-                    <thead>
-                        <tr>
-                            <th>Категория</th>
-                            <th>Условия</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr><td><strong>Длительность</strong></td><td>3 месяца (08.09.2026 — 11.09.2026) с возможностью продления</td></tr>
-                        <tr><td><strong>Отработка</strong></td><td>Пропущенные дни и неполные сессии подлежат отработке</td></tr>
-                    </tbody>
-                </table>
-            </div>
+                <div class="modal-section" id="reg-section-4">
+                    <div class="section-controls">
+                        <button class="options-btn" onclick="moveSection(this, -1)">▲</button>
+                        <button class="options-btn" onclick="moveSection(this, 1)">▼</button>
+                        <button class="btn-danger options-btn" onclick="removeSection(this)">✖</button>
+                        <button class="options-btn" onclick="addSectionContent(this, 'table')">+ Таблица</button>
+                        <button class="options-btn" onclick="addSectionContent(this, 'text')">+ Текст</button>
+                        <button class="options-btn" onclick="addSectionContent(this, 'image')">+ Картинка</button>
+                    </div>
+                    <h2 contenteditable="false" onblur="saveRegulationsData()">4. СРОКИ И ОТРАБОТКИ</h2>
+                    <div class="reg-content-area" contenteditable="false" onblur="saveRegulationsData()">
+                        <table class="history-table">
+                            <thead>
+                                <tr>
+                                    <th>Категория</th>
+                                    <th>Условия</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr><td><strong>Длительность</strong></td><td>3 месяца (08.09.2026 — 11.09.2026) с возможностью продления</td></tr>
+                                <tr><td><strong>Отработка</strong></td><td>Пропущенные дни и неполные сессии подлежат отработке</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
 
-            <div class="modal-section">
-                <h2>5. РАНГИ И СРАВНЕНИЕ РЕАКЦИИ</h2>
-                <table class="history-table" id="rankTable">
-                    <thead>
-                        <tr>
-                            <th>Время (мс)</th>
-                            <th>Ранг</th>
-                            <th>Сравнение / Ориентир</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr id="rank-1"><td>&lt; 150</td><td><strong>Мировой уровень</strong></td><td>Про-киберспортсмены (osu! DT / FPS), пилоты F1</td></tr>
-                        <tr id="rank-2"><td>150 - 180</td><td><strong>Элита</strong></td><td>Топ-геймеры, пилоты истребителей</td></tr>
-                        <tr id="rank-3"><td>180 - 210</td><td><strong>Продвинутый</strong></td><td>Опытные геймеры, спортсмены</td></tr>
-                        <tr id="rank-4"><td>210 - 250</td><td><strong>Норма</strong></td><td>Средний взрослый человек</td></tr>
-                        <tr id="rank-5"><td>250 - 300</td><td><strong>Ниже среднего</strong></td><td>Любители, состояние усталости</td></tr>
-                        <tr id="rank-6"><td>&gt; 300</td><td><strong>Замедленная</strong></td><td>Сильное утомление / отсутствие концентрации</td></tr>
-                    </tbody>
-                </table>
+                <div class="modal-section" id="reg-section-5">
+                    <div class="section-controls">
+                        <button class="options-btn" onclick="moveSection(this, -1)">▲</button>
+                        <button class="options-btn" onclick="moveSection(this, 1)">▼</button>
+                        <button class="btn-danger options-btn" onclick="removeSection(this)">✖</button>
+                        <button class="options-btn" onclick="addSectionContent(this, 'table')">+ Таблица</button>
+                        <button class="options-btn" onclick="addSectionContent(this, 'text')">+ Текст</button>
+                        <button class="options-btn" onclick="addSectionContent(this, 'image')">+ Картинка</button>
+                    </div>
+                    <h2 contenteditable="false" onblur="saveRegulationsData()">5. РАНГИ И СРАВНЕНИЕ РЕАКЦИИ</h2>
+                    <div class="reg-content-area" contenteditable="false" onblur="saveRegulationsData()">
+                        <table class="history-table" id="rankTable">
+                            <thead>
+                                <tr>
+                                    <th>Время (мс)</th>
+                                    <th>Ранг</th>
+                                    <th>Сравнение / Ориентир</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr id="rank-1"><td>&lt; 150</td><td><strong>Мировой уровень</strong></td><td>Про-киберспортсмены (osu! DT / FPS), пилоты F1</td></tr>
+                                <tr id="rank-2"><td>150 - 180</td><td><strong>Элита</strong></td><td>Топ-геймеры, пилоты истребителей</td></tr>
+                                <tr id="rank-3"><td>180 - 210</td><td><strong>Продвинутый</strong></td><td>Опытные геймеры, спортсмены</td></tr>
+                                <tr id="rank-4"><td>210 - 250</td><td><strong>Норма</strong></td><td>Средний взрослый человек</td></tr>
+                                <tr id="rank-5"><td>250 - 300</td><td><strong>Ниже среднего</strong></td><td>Любители, состояние усталости</td></tr>
+                                <tr id="rank-6"><td>&gt; 300</td><td><strong>Замедленная</strong></td><td>Сильное утомление / отсутствие концентрации</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
 
             <hr style="border-color: var(--border); margin: 25px 0;">
@@ -475,6 +766,7 @@
 
             <div class="modal-section">
                 <h2>7. УПРАВЛЕНИЕ ДАННЫМИ</h2>
+                <button class="btn-alt" onclick="resetRegulationsInterface()" style="margin-bottom: 10px;">Сбросить изменения интерфейса регламента</button>
                 <button class="btn-danger" onclick="clearData()">Сбросить все данные</button>
             </div>
 
@@ -484,26 +776,68 @@
 
 <script>
     const defaultTheme = {
-        bg: '#0b0c10',
-        panel: '#1f2833',
-        acc1: '#66fcf1',
-        acc2: '#45a29e',
-        text: '#c5c6c7',
-        border: '#333333'
+        bg: '#0b0c10', panel: '#1f2833', acc1: '#66fcf1', acc2: '#45a29e', text: '#c5c6c7', border: '#333333'
     };
+    const defaultTasks = ["Osu HRDTHD (30 мин) (Опционально)", "Kovaak's (30 мин)"];
 
     let experimentData = JSON.parse(localStorage.getItem('reactionExperimentData')) || [];
     let customTheme = JSON.parse(localStorage.getItem('reactionCustomTheme')) || defaultTheme;
+    let tasksConfig = JSON.parse(localStorage.getItem('reactionTasksConfig')) || defaultTasks;
+    
     let reactionChartInstance = null;
     let falseStartsChartInstance = null;
     let editIndex = -1;
+    let isEditMode = false;
+
+    // Test session storage for 5-attempt averaging and 5 blocks accumulation
+    let testAttempts = { 1: [], 2: [], 3: [] };
+    let testAverages = { 1: [], 2: [], 3: [] };
 
     function init() {
         loadThemeInputs();
         applyThemeCSS();
+        renderTasksList();
         bindInputListeners();
+        loadRegulationsData();
         resetForm();
         updateDashboard();
+        updateTestSessionInfo();
+        setupCellClickSelection();
+    }
+
+    function renderTasksList() {
+        const container = document.getElementById('dynamic-tasks-list');
+        container.innerHTML = '';
+        tasksConfig.forEach((task, idx) => {
+            container.innerHTML += `
+                <div class="checkbox-group" style="justify-content: space-between; margin-bottom: 5px;">
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <input type="checkbox" id="task-${idx}" class="dynamic-task-checkbox" data-taskname="${task}">
+                        <label for="task-${idx}">${task}</label>
+                    </div>
+                    <button class="action-btn btn-danger" onclick="removeTask(${idx})" style="padding:2px 8px; font-size:12px;">✖</button>
+                </div>
+            `;
+        });
+    }
+
+    function addTask() {
+        const input = document.getElementById('new-task-input');
+        const val = input.value.trim();
+        if (val && !tasksConfig.includes(val)) {
+            tasksConfig.push(val);
+            localStorage.setItem('reactionTasksConfig', JSON.stringify(tasksConfig));
+            input.value = '';
+            renderTasksList();
+        }
+    }
+
+    function removeTask(idx) {
+        if (confirm(`Удалить пункт "${tasksConfig[idx]}"?`)) {
+            tasksConfig.splice(idx, 1);
+            localStorage.setItem('reactionTasksConfig', JSON.stringify(tasksConfig));
+            renderTasksList();
+        }
     }
 
     function bindInputListeners() {
@@ -530,20 +864,14 @@
 
     function checkFormInputs() {
         if (editIndex > -1) return;
-
         const f1Text = document.getElementById('f1-results').value.trim();
         const hbText = document.getElementById('hb-results').value.trim();
         const f1Fs = document.getElementById('f1-false').value;
         const hbFs = document.getElementById('hb-false').value;
-
         const hasData = f1Text.length > 0 || hbText.length > 0 || f1Fs !== '0' || hbFs !== '0';
         const clearBtn = document.getElementById('clearInputBtn');
-
-        if (hasData) {
-            clearBtn.classList.add('visible');
-        } else {
-            clearBtn.classList.remove('visible');
-        }
+        if (hasData) clearBtn.classList.add('visible');
+        else clearBtn.classList.remove('visible');
     }
 
     function clearCurrentInput() {
@@ -551,8 +879,8 @@
         document.getElementById('hb-results').value = '';
         document.getElementById('f1-false').value = '0';
         document.getElementById('hb-false').value = '0';
-        document.getElementById('osu-done').checked = false;
-        document.getElementById('kovaaks-done').checked = false;
+        document.getElementById('is-weekend').checked = false;
+        document.querySelectorAll('.dynamic-task-checkbox').forEach(cb => cb.checked = false);
         checkFormInputs();
     }
 
@@ -585,6 +913,14 @@
         applyThemeCSS();
     }
 
+    function resetRegulationsInterface() {
+        if (confirm("Сбросить все изменения в окне регламента? Цвета палитры интерфейса изменены не будут.")) {
+            if (isEditMode) toggleEditMode();
+            localStorage.removeItem('reactionRegulationsHTML');
+            location.reload();
+        }
+    }
+
     function applyThemeCSS() {
         const doc = document.documentElement;
         doc.style.setProperty('--bg-color', customTheme.bg);
@@ -605,6 +941,7 @@
     }
 
     function closeRegulations() {
+        if (isEditMode) toggleEditMode();
         modal.classList.remove('open');
         setTimeout(() => modal.style.display = 'none', 300);
         document.body.style.overflow = ''; 
@@ -615,8 +952,306 @@
     }
 
     document.addEventListener('keydown', function(event) {
-        if (event.key === 'Escape' && modal.classList.contains('open')) closeRegulations();
+        if (event.key === 'Escape') {
+            if (modal.classList.contains('open')) closeRegulations();
+            if (document.getElementById('testModalOverlay').classList.contains('open')) closeTestWindow();
+            const taskModal = document.getElementById('taskModalOverlay');
+            if (taskModal && taskModal.classList.contains('open')) closeTaskModal();
+        }
     });
+
+    function toggleEditMode() {
+        isEditMode = !isEditMode;
+        const btn = document.getElementById('editModeToggleBtn');
+        const leftSidebar = document.getElementById('edit-sidebar-left');
+        const rightSidebar = document.getElementById('edit-sidebar-right');
+        const contentDiv = document.getElementById('regulationsModalContent');
+
+        if (isEditMode) {
+            btn.innerText = "✏ Редактирование: ВКЛ";
+            btn.style.background = "var(--accent-cyan)";
+            btn.style.color = "var(--bg-color)";
+            leftSidebar.classList.add('active');
+            rightSidebar.classList.add('active');
+            contentDiv.classList.add('edit-mode-active', 'edit-mode-cells');
+            
+            document.querySelectorAll('.modal-section h2, .reg-content-area').forEach(el => {
+                el.setAttribute('contenteditable', 'true');
+            });
+            updateSelectedCellsCount();
+            showToast('Режим редактирования включен');
+        } else {
+            btn.innerText = "✏ Редактирование: ВЫКЛ";
+            btn.style.background = "";
+            btn.style.color = "";
+            leftSidebar.classList.remove('active');
+            rightSidebar.classList.remove('active');
+            contentDiv.classList.remove('edit-mode-active', 'edit-mode-cells');
+
+            document.querySelectorAll('.modal-section h2, .reg-content-area').forEach(el => {
+                el.setAttribute('contenteditable', 'false');
+            });
+            
+            document.querySelectorAll('.selected-cell').forEach(c => c.classList.remove('selected-cell'));
+            updateSelectedCellsCount();
+            saveRegulationsData();
+            showToast('Режим редактирования выключен');
+        }
+    }
+
+    function updateSelectedCellsCount() {
+        const count = document.querySelectorAll('.selected-cell').length;
+        const counterEl = document.getElementById('selected-cells-count');
+        if (counterEl) {
+            counterEl.innerText = `Выделено ячеек: ${count}`;
+        }
+    }
+
+    function setupCellClickSelection() {
+        document.addEventListener('mousedown', function(e) {
+            if (!isEditMode) return;
+            const cell = e.target.closest('td, th');
+            if (cell && document.getElementById('regulationsModalContent').contains(cell)) {
+                cell.classList.toggle('selected-cell');
+                updateSelectedCellsCount();
+                e.preventDefault();
+            }
+        });
+    }
+
+    function saveRegulationsData() {
+        const container = document.getElementById('regulations-sections-container');
+        if (container) {
+            document.querySelectorAll('.selected-cell').forEach(c => c.classList.remove('selected-cell'));
+            updateSelectedCellsCount();
+            localStorage.setItem('reactionRegulationsHTML', container.innerHTML);
+            showToast('Регламент сохранен');
+        }
+    }
+
+    function loadRegulationsData() {
+        const saved = localStorage.getItem('reactionRegulationsHTML');
+        if (saved) {
+            const container = document.getElementById('regulations-sections-container');
+            if (container) container.innerHTML = saved;
+        }
+    }
+
+    function addRegulationSection() {
+        const container = document.getElementById('regulations-sections-container');
+        const sectionId = 'reg-section-' + Date.now();
+        const sectionDiv = document.createElement('div');
+        sectionDiv.className = 'modal-section';
+        sectionDiv.id = sectionId;
+        sectionDiv.innerHTML = `
+            <div class="section-controls">
+                <button class="options-btn" onclick="moveSection(this, -1)">▲</button>
+                <button class="options-btn" onclick="moveSection(this, 1)">▼</button>
+                <button class="btn-danger options-btn" onclick="removeSection(this)">✖</button>
+                <button class="options-btn" onclick="addSectionContent(this, 'table')">+ Таблица</button>
+                <button class="options-btn" onclick="addSectionContent(this, 'text')">+ Текст</button>
+                <button class="options-btn" onclick="addSectionContent(this, 'image')">+ Картинка</button>
+            </div>
+            <h2 contenteditable="true" onblur="saveRegulationsData()">Новый пункт регламента</h2>
+            <div class="reg-content-area" contenteditable="true" onblur="saveRegulationsData()">
+                <p>Содержание нового пункта...</p>
+            </div>
+        `;
+        container.appendChild(sectionDiv);
+        saveRegulationsData();
+    }
+
+    function removeSection(btn) {
+        const section = btn.closest('.modal-section');
+        if (section && confirm('Удалить этот пункт регламента?')) {
+            section.remove();
+            saveRegulationsData();
+        }
+    }
+
+    function moveSection(btn, direction) {
+        const section = btn.closest('.modal-section');
+        if (!section) return;
+        if (direction === -1 && section.previousElementSibling) {
+            section.parentNode.insertBefore(section, section.previousElementSibling);
+        } else if (direction === 1 && section.nextElementSibling) {
+            section.parentNode.insertBefore(section.nextElementSibling, section);
+        }
+        saveRegulationsData();
+    }
+
+    function addSectionContent(btn, type) {
+        const section = btn.closest('.modal-section');
+        const contentArea = section.querySelector('.reg-content-area');
+        if (!contentArea) return;
+
+        if (type === 'text') {
+            const p = document.createElement('p');
+            p.innerText = 'Новый текстовый блок...';
+            contentArea.appendChild(p);
+        } else if (type === 'table') {
+            const rowsInput = prompt('Введите количество строк таблицы:', '2');
+            if (rowsInput === null) return;
+            const colsInput = prompt('Введите количество столбцов таблицы:', '2');
+            if (colsInput === null) return;
+            const rowCount = parseInt(rowsInput, 10) || 2;
+            const colCount = parseInt(colsInput, 10) || 2;
+
+            const table = document.createElement('table');
+            table.className = 'history-table';
+            
+            let theadHTML = '<thead><tr>';
+            for (let c = 0; c < colCount; c++) {
+                theadHTML += `<th>Заголовок ${c + 1}</th>`;
+            }
+            theadHTML += '</tr></thead>';
+
+            let tbodyHTML = '<tbody>';
+            for (let r = 0; r < Math.max(1, rowCount - 1); r++) {
+                tbodyHTML += '<tr>';
+                for (let c = 0; c < colCount; c++) {
+                    tbodyHTML += `<td>Данные ${r + 1},${c + 1}</td>`;
+                }
+                tbodyHTML += '</tr>';
+            }
+            tbodyHTML += '</tbody>';
+
+            table.innerHTML = theadHTML + tbodyHTML;
+            contentArea.appendChild(table);
+        } else if (type === 'image') {
+            const url = prompt('Введите URL картинки:');
+            if (url) {
+                const img = document.createElement('img');
+                img.src = url;
+                img.style.maxWidth = '100%';
+                img.style.borderRadius = '5px';
+                img.style.margin = '10px 0';
+                contentArea.appendChild(img);
+            }
+        }
+        saveRegulationsData();
+    }
+
+    function formatSelectedTextColor() {
+        const color = document.getElementById('textColorPicker').value;
+        const selection = window.getSelection();
+        if (!selection.rangeCount || selection.isCollapsed) {
+            alert('Выделите текст внутри раздела для изменения цвета');
+            return;
+        }
+        const range = selection.getRangeAt(0);
+        const span = document.createElement('span');
+        span.style.color = color;
+        span.appendChild(range.extractContents());
+        range.insertNode(span);
+        saveRegulationsData();
+        showToast('Цвет текста изменен');
+    }
+
+    function formatSelectedTableColor() {
+        const color = document.getElementById('tableColorPicker').value;
+        const selectedCells = document.querySelectorAll('.selected-cell');
+        if (selectedCells.length > 0) {
+            selectedCells.forEach(cell => {
+                cell.style.backgroundColor = color;
+                cell.classList.remove('selected-cell');
+            });
+            updateSelectedCellsCount();
+            saveRegulationsData();
+            showToast('Цвет выбранных ячеек изменен');
+        } else {
+            alert('Выделите ячейки кликом в режиме редактирования');
+        }
+    }
+
+    function mergeSelectedCells() {
+        const selectedCells = Array.from(document.querySelectorAll('.selected-cell'));
+        if (selectedCells.length < 2) {
+            alert('Для соединения необходимо выделить минимум 2 ячейки (кликом по ячейкам в режиме редактирования). Сейчас выделено: ' + selectedCells.length);
+            return;
+        }
+
+        const table = selectedCells[0].closest('table');
+        const allInSameTable = selectedCells.every(cell => cell.closest('table') === table);
+        if (!allInSameTable) {
+            alert('Все выделенные ячейки должны принадлежать одной таблице.');
+            return;
+        }
+
+        const rows = Array.from(table.rows);
+        let grid = [];
+        rows.forEach((tr, rIdx) => {
+            if (!grid[rIdx]) grid[rIdx] = [];
+            let cIdx = 0;
+            Array.from(tr.cells).forEach(cell => {
+                while (grid[rIdx][cIdx]) cIdx++;
+                const rowspan = parseInt(cell.getAttribute('rowspan') || '1', 10);
+                const colspan = parseInt(cell.getAttribute('colspan') || '1', 10);
+                for (let r = 0; r < rowspan; r++) {
+                    for (let c = 0; c < colspan; c++) {
+                        if (!grid[rIdx + r]) grid[rIdx + r] = [];
+                        grid[rIdx + r][cIdx + c] = cell;
+                    }
+                }
+                cIdx += colspan;
+            });
+        });
+
+        let minR = Infinity, maxR = -Infinity;
+        let minC = Infinity, maxC = -Infinity;
+        let cellsToMerge = new Set();
+
+        selectedCells.forEach(cell => {
+            for (let r = 0; r < grid.length; r++) {
+                for (let c = 0; c < (grid[r] ? grid[r].length : 0); c++) {
+                    if (grid[r][c] === cell) {
+                        if (r < minR) minR = r;
+                        if (r > maxR) maxR = r;
+                        if (c < minC) minC = c;
+                        if (c > maxC) maxC = c;
+                    }
+                }
+            }
+        });
+
+        for (let r = minR; r <= maxR; r++) {
+            for (let c = minC; c <= maxC; c++) {
+                if (grid[r] && grid[r][c]) {
+                    cellsToMerge.add(grid[r][c]);
+                }
+            }
+        }
+
+        let combinedHTML = [];
+        cellsToMerge.forEach(cell => {
+            if (cell.innerHTML.trim() !== '') {
+                combinedHTML.push(cell.innerHTML.trim());
+            }
+        });
+
+        const targetCell = grid[minR][minC];
+        targetCell.innerHTML = [...new Set(combinedHTML)].join(' ');
+
+        const rowSpanVal = maxR - minR + 1;
+        const colSpanVal = maxC - minC + 1;
+
+        if (rowSpanVal > 1) targetCell.setAttribute('rowspan', rowSpanVal);
+        else targetCell.removeAttribute('rowspan');
+
+        if (colSpanVal > 1) targetCell.setAttribute('colspan', colSpanVal);
+        else targetCell.removeAttribute('colspan');
+
+        cellsToMerge.forEach(cell => {
+            if (cell !== targetCell) {
+                cell.remove();
+            }
+        });
+
+        document.querySelectorAll('.selected-cell').forEach(c => c.classList.remove('selected-cell'));
+        updateSelectedCellsCount();
+        saveRegulationsData();
+        showToast('Ячейки успешно соединены!');
+    }
 
     function calculateStats(arr) {
         if (!arr || arr.length === 0) return { mean: 0, min: 0, max: 0 };
@@ -632,6 +1267,7 @@
         const hbRaw = document.getElementById('hb-results').value.trim();
         const f1Input = f1Raw.split(/\s+/).map(Number).filter(n => !isNaN(n) && n > 0);
         const hbInput = hbRaw.split(/\s+/).map(Number).filter(n => !isNaN(n) && n > 0);
+        const isWeekend = document.getElementById('is-weekend').checked;
         
         if (f1Input.length === 0 || hbInput.length === 0) {
             alert("Требуются корректные числовые значения (через пробел).");
@@ -644,6 +1280,11 @@
         const hbStats = calculateStats(hbInput);
         hbStats.falseStarts = parseInt(document.getElementById('hb-false').value) || 0;
 
+        const tasksState = {};
+        document.querySelectorAll('.dynamic-task-checkbox').forEach(cb => {
+            tasksState[cb.getAttribute('data-taskname')] = cb.checked;
+        });
+
         const dayRecord = {
             f1Raw, hbRaw, f1: f1Stats, hb: hbStats,
             total: { 
@@ -651,8 +1292,8 @@
                 min: parseFloat(((f1Stats.min + hbStats.min) / 2).toFixed(2)), 
                 max: parseFloat(((f1Stats.max + hbStats.max) / 2).toFixed(2))
             },
-            osu: document.getElementById('osu-done').checked,
-            kovaaks: document.getElementById('kovaaks-done').checked
+            isWeekend,
+            tasks: tasksState
         };
 
         if (editIndex > -1) {
@@ -676,8 +1317,17 @@
         document.getElementById('hb-results').value = data.hbRaw || '';
         document.getElementById('f1-false').value = data.f1.falseStarts;
         document.getElementById('hb-false').value = data.hb.falseStarts;
-        document.getElementById('osu-done').checked = data.osu;
-        document.getElementById('kovaaks-done').checked = data.kovaaks;
+        document.getElementById('is-weekend').checked = !!data.isWeekend;
+        
+        document.querySelectorAll('.dynamic-task-checkbox').forEach(cb => {
+            const tName = cb.getAttribute('data-taskname');
+            if (data.tasks) {
+                cb.checked = !!data.tasks[tName];
+            } else {
+                if (tName.includes('Osu')) cb.checked = !!data.osu;
+                if (tName.includes('Kovaak')) cb.checked = !!data.kovaaks;
+            }
+        });
         
         document.getElementById('formTitle').innerText = `Редактирование Дня ${data.day}`;
         document.getElementById('saveBtn').innerText = "Обновить данные";
@@ -705,8 +1355,8 @@
         document.getElementById('hb-results').value = '';
         document.getElementById('f1-false').value = '0';
         document.getElementById('hb-false').value = '0';
-        document.getElementById('osu-done').checked = false;
-        document.getElementById('kovaaks-done').checked = false;
+        document.getElementById('is-weekend').checked = false;
+        document.querySelectorAll('.dynamic-task-checkbox').forEach(cb => cb.checked = false);
         
         document.getElementById('formTitle').innerHTML = `Ввод данных за День <span id="currentDayLabel">${experimentData.length + 1}</span>`;
         document.getElementById('saveBtn').innerText = "Сохранить результаты";
@@ -723,7 +1373,7 @@
         }
     }
 
-    function getGrowthHTML(current, initial, label = 'от Дня 1') {
+    function getGrowthHTML(current, initial, label = '') {
         if (initial === undefined || initial === null || isNaN(initial)) return '';
         const percent = ((current - initial) / initial) * 100;
         const cls = percent <= 0 ? 'positive' : 'negative'; 
@@ -734,15 +1384,12 @@
     function updateCurrentRank(latestMean) {
         const rankDisplay = document.getElementById('currentRankDisplay');
         const rows = [
-            document.getElementById('rank-1'),
-            document.getElementById('rank-2'),
-            document.getElementById('rank-3'),
-            document.getElementById('rank-4'),
-            document.getElementById('rank-5'),
-            document.getElementById('rank-6')
+            document.getElementById('rank-1'), document.getElementById('rank-2'),
+            document.getElementById('rank-3'), document.getElementById('rank-4'),
+            document.getElementById('rank-5'), document.getElementById('rank-6')
         ];
         
-        rows.forEach(row => row.classList.remove('rank-highlight'));
+        rows.forEach(row => { if (row) row.classList.remove('rank-highlight'); });
 
         if (!latestMean) {
             rankDisplay.innerHTML = 'Общий ранг (за сегодня): <span>Нет данных</span>';
@@ -759,8 +1406,66 @@
         else if (latestMean <= 300) { rankName = 'Ниже среднего'; targetRowIndex = 4; }
         else { rankName = 'Замедленная'; targetRowIndex = 5; }
 
-        if (targetRowIndex !== -1) rows[targetRowIndex].classList.add('rank-highlight');
+        if (targetRowIndex !== -1 && rows[targetRowIndex]) rows[targetRowIndex].classList.add('rank-highlight');
         rankDisplay.innerHTML = `Общий ранг (за сегодня - ${latestMean}мс): <span>${rankName}</span>`;
+    }
+
+    function toggleWeeklyStat(el, containerId) {
+        const container = document.getElementById(containerId);
+        if (container.style.display === 'none') {
+            container.style.display = 'block';
+            el.innerText = '[ Скрыть неделя ]';
+        } else {
+            container.style.display = 'none';
+            el.innerText = '[ Неделя ]';
+        }
+    }
+
+    function showDayTasks(index) {
+        const d = experimentData[index];
+        if (!d) return;
+        let html = `<h3>Задачи за День ${d.day}</h3><ul style="margin-top:10px; list-style:none; padding:0;">`;
+        if (d.tasks) {
+            for (const [tName, isDone] of Object.entries(d.tasks)) {
+                const status = isDone ? '<span style="color:#4caf50; font-weight:bold;">Выполнено</span>' : '<span style="color:#ff4c4c;">Не выполнено</span>';
+                html += `<li style="padding:8px 0; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;"><span>${tName}</span> ${status}</li>`;
+            }
+        } else {
+            const osuDone = d.osu ? '<span style="color:#4caf50; font-weight:bold;">Выполнено</span>' : '<span style="color:#ff4c4c;">Не выполнено</span>';
+            const kovDone = d.kovaaks ? '<span style="color:#4caf50; font-weight:bold;">Выполнено</span>' : '<span style="color:#ff4c4c;">Не выполнено</span>';
+            html += `<li style="padding:8px 0; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;"><span>Osu! HRDTHD (30 мин)</span> ${osuDone}</li>`;
+            html += `<li style="padding:8px 0; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;"><span>Kovaak's (30 мин)</span> ${kovDone}</li>`;
+        }
+        html += `</ul>`;
+
+        let taskModal = document.getElementById('taskModalOverlay');
+        if (!taskModal) {
+            const div = document.createElement('div');
+            div.className = 'modal-overlay';
+            div.id = 'taskModalOverlay';
+            div.innerHTML = `
+                <div class="modal-content" style="max-width:500px;">
+                    <div class="modal-header">
+                        <h1 style="font-size:1.2em; margin-bottom:0;">Просмотр задач</h1>
+                        <button class="close-modal" onclick="closeTaskModal()">×</button>
+                    </div>
+                    <div class="modal-body" id="taskModalBody"></div>
+                </div>
+            `;
+            document.body.appendChild(div);
+            taskModal = div;
+        }
+        document.getElementById('taskModalBody').innerHTML = html;
+        taskModal.style.display = 'flex';
+        setTimeout(() => taskModal.classList.add('open'), 10);
+    }
+
+    function closeTaskModal() {
+        const taskModal = document.getElementById('taskModalOverlay');
+        if (taskModal) {
+            taskModal.classList.remove('open');
+            setTimeout(() => taskModal.style.display = 'none', 300);
+        }
     }
 
     function updateDashboard() {
@@ -774,7 +1479,7 @@
             if (targetSel) targetSel.innerHTML = '';
             if (compareSel) compareSel.innerHTML = '';
             statsEl.innerHTML = '<p style="color: var(--text-main); grid-column: 1/-1; text-align: center;">Нет сохраненных данных</p>';
-            tbody.innerHTML = '<tr><td colspan="7">Нет сохраненных данных</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="8">Нет сохраненных данных</td></tr>';
             updateCurrentRank(null);
             updateCharts();
             return;
@@ -784,31 +1489,22 @@
             const currentTargetVal = targetSel.value;
             const currentCompareVal = compareSel.value;
 
-            if (targetSel.options.length !== experimentData.length) {
-                let targetOpts = '';
-                let compareOpts = '';
-                experimentData.forEach((d, idx) => {
-                    targetOpts += `<option value="${idx}">Просмотр: День ${d.day}</option>`;
-                    compareOpts += `<option value="${idx}">Сравнение: День ${d.day}</option>`;
-                });
-                targetSel.innerHTML = targetOpts;
-                compareSel.innerHTML = compareOpts;
+            let targetOpts = `<option value="latest">Последний пройденный</option>`;
+            let compareOpts = '';
+            experimentData.forEach((d, idx) => {
+                const mark = d.isWeekend ? ' (Выходной)' : '';
+                targetOpts += `<option value="${idx}">Просмотр: День ${d.day}${mark}</option>`;
+                compareOpts += `<option value="${idx}">Сравнение: День ${d.day}${mark}</option>`;
+            });
+            targetSel.innerHTML = targetOpts;
+            compareSel.innerHTML = compareOpts;
 
-                if (currentTargetVal !== '' && parseInt(currentTargetVal, 10) < experimentData.length) {
-                    targetSel.value = currentTargetVal;
-                } else {
-                    targetSel.value = experimentData.length - 1;
-                }
-
-                if (currentCompareVal !== '' && parseInt(currentCompareVal, 10) < experimentData.length) {
-                    compareSel.value = currentCompareVal;
-                } else {
-                    compareSel.value = 0;
-                }
-            }
+            if (currentTargetVal !== '') targetSel.value = currentTargetVal;
+            if (currentCompareVal !== '' && parseInt(currentCompareVal, 10) < experimentData.length) compareSel.value = currentCompareVal;
+            else compareSel.value = 0;
         }
 
-        let targetIdx = targetSel && targetSel.value !== '' ? parseInt(targetSel.value, 10) : experimentData.length - 1;
+        let targetIdx = targetSel && targetSel.value !== 'latest' && targetSel.value !== '' ? parseInt(targetSel.value, 10) : experimentData.length - 1;
         let compareIdx = compareSel && compareSel.value !== '' ? parseInt(compareSel.value, 10) : 0;
 
         if (isNaN(targetIdx) || targetIdx >= experimentData.length) targetIdx = experimentData.length - 1;
@@ -816,61 +1512,104 @@
 
         const latest = experimentData[targetIdx];
         const compareTarget = experimentData[compareIdx];
-
         const label = `от Дня ${compareTarget.day}`;
-        const totalF1FS = experimentData.reduce((sum, d) => sum + d.f1.falseStarts, 0);
-        const totalHBFS = experimentData.reduce((sum, d) => sum + d.hb.falseStarts, 0);
+
+        const activeDays = experimentData.filter(d => !d.isWeekend);
+        const totalF1FS = activeDays.reduce((sum, d) => sum + d.f1.falseStarts, 0);
+        const totalHBFS = activeDays.reduce((sum, d) => sum + d.hb.falseStarts, 0);
+
+        const last7 = activeDays.slice(-7);
+        const weekMean = last7.length ? (last7.reduce((sum, d) => sum + d.total.mean, 0) / last7.length).toFixed(2) : 0;
+        const weekMeanF1 = last7.length ? (last7.reduce((sum, d) => sum + d.f1.mean, 0) / last7.length).toFixed(2) : 0;
+        const weekMeanHB = last7.length ? (last7.reduce((sum, d) => sum + d.hb.mean, 0) / last7.length).toFixed(2) : 0;
+        const weekTotalFS = last7.length ? last7.reduce((sum, d) => sum + d.f1.falseStarts + d.hb.falseStarts, 0) : 0;
+        const weekMeanDelta = last7.length ? (last7.reduce((sum, d) => sum + (d.total.max - d.total.min), 0) / last7.length).toFixed(2) : 0;
+        const dayDelta = (latest.total.max - latest.total.min).toFixed(2);
 
         statsEl.innerHTML = `
             <div class="stat-card">
-                <div>Общие показатели (День ${latest.day})</div>
-                <div class="stat-value">Ср: <span class="copyable" title="Нажмите, чтобы скопировать" onclick="copyVal('${latest.total.mean}', this)">${latest.total.mean}</span>мс</div>
-                <div class="stat-subtext">
-                    Мин: <span class="copyable" title="Нажмите, чтобы скопировать" onclick="copyVal('${latest.total.min}', this)">${latest.total.min}</span>мс | 
-                    Макс: <span class="copyable" title="Нажмите, чтобы скопировать" onclick="copyVal('${latest.total.max}', this)">${latest.total.max}</span>мс
-                </div>
+                <div>Общие показатели (День ${latest.day}) <span style="font-size:0.75em; color:var(--accent-cyan); cursor:pointer; float:right;" onclick="toggleWeeklyStat(this, 'weekly-total')">[ Неделя ]</span></div>
+                <div class="stat-value">Ср: <span class="copyable" onclick="copyVal('${latest.total.mean}', this)">${latest.total.mean}</span>мс</div>
+                <div class="stat-subtext">Мин: ${latest.total.min}мс | Макс: ${latest.total.max}мс</div>
                 ${getGrowthHTML(latest.total.mean, compareTarget.total.mean, label)}
+                <div id="weekly-total" style="display:none; margin-top:10px; padding-top:8px; border-top:1px dashed var(--border);">
+                    <div style="color: var(--accent-cyan); font-weight:bold; font-size:0.9em;">Среднее за неделю (Акт.)</div>
+                    <div style="font-size:1.1em; font-weight:bold; color:var(--text-main);">${weekMean}мс</div>
+                    <div style="font-size:0.8em; opacity:0.8;">За последние ${last7.length} активных дней</div>
+                </div>
             </div>
             <div class="stat-card">
-                <div>Formula 1 (День ${latest.day})</div>
-                <div class="stat-value">Ср: <span class="copyable" title="Нажмите, чтобы скопировать" onclick="copyVal('${latest.f1.mean}', this)">${latest.f1.mean}</span>мс</div>
-                <div class="stat-subtext">
-                    Мин: <span class="copyable" title="Нажмите, чтобы скопировать" onclick="copyVal('${latest.f1.min}', this)">${latest.f1.min}</span>мс | 
-                    Макс: <span class="copyable" title="Нажмите, чтобы скопировать" onclick="copyVal('${latest.f1.max}', this)">${latest.f1.max}</span>мс
-                </div>
+                <div>Formula 1 (День ${latest.day}) <span style="font-size:0.75em; color:var(--accent-cyan); cursor:pointer; float:right;" onclick="toggleWeeklyStat(this, 'weekly-f1')">[ Неделя ]</span></div>
+                <div class="stat-value">Ср: <span class="copyable" onclick="copyVal('${latest.f1.mean}', this)">${latest.f1.mean}</span>мс</div>
+                <div class="stat-subtext">Мин: ${latest.f1.min}мс | Макс: ${latest.f1.max}мс</div>
                 ${getGrowthHTML(latest.f1.mean, compareTarget.f1.mean, label)}
+                <div id="weekly-f1" style="display:none; margin-top:10px; padding-top:8px; border-top:1px dashed var(--border);">
+                    <div style="color: var(--accent-cyan); font-weight:bold; font-size:0.9em;">Среднее за неделю (Акт.)</div>
+                    <div style="font-size:1.1em; font-weight:bold; color:var(--text-main);">${weekMeanF1}мс</div>
+                    <div style="font-size:0.8em; opacity:0.8;">За последние ${last7.length} активных дней</div>
+                </div>
             </div>
             <div class="stat-card">
-                <div>Human Benchmark (День ${latest.day})</div>
-                <div class="stat-value">Ср: <span class="copyable" title="Нажмите, чтобы скопировать" onclick="copyVal('${latest.hb.mean}', this)">${latest.hb.mean}</span>мс</div>
-                <div class="stat-subtext">
-                    Мин: <span class="copyable" title="Нажмите, чтобы скопировать" onclick="copyVal('${latest.hb.min}', this)">${latest.hb.min}</span>мс | 
-                    Макс: <span class="copyable" title="Нажмите, чтобы скопировать" onclick="copyVal('${latest.hb.max}', this)">${latest.hb.max}</span>мс
-                </div>
+                <div>Human Benchmark (День ${latest.day}) <span style="font-size:0.75em; color:var(--accent-cyan); cursor:pointer; float:right;" onclick="toggleWeeklyStat(this, 'weekly-hb')">[ Неделя ]</span></div>
+                <div class="stat-value">Ср: <span class="copyable" onclick="copyVal('${latest.hb.mean}', this)">${latest.hb.mean}</span>мс</div>
+                <div class="stat-subtext">Мин: ${latest.hb.min}мс | Макс: ${latest.hb.max}мс</div>
                 ${getGrowthHTML(latest.hb.mean, compareTarget.hb.mean, label)}
+                <div id="weekly-hb" style="display:none; margin-top:10px; padding-top:8px; border-top:1px dashed var(--border);">
+                    <div style="color: var(--accent-cyan); font-weight:bold; font-size:0.9em;">Среднее за неделю (Акт.)</div>
+                    <div style="font-size:1.1em; font-weight:bold; color:var(--text-main);">${weekMeanHB}мс</div>
+                    <div style="font-size:0.8em; opacity:0.8;">За последние ${last7.length} активных дней</div>
+                </div>
             </div>
             <div class="stat-card">
-                <div>Фальшстарты (Всего)</div>
-                <div class="stat-value"><span class="copyable" title="Нажмите, чтобы скопировать" onclick="copyVal('${totalF1FS + totalHBFS}', this)">${totalF1FS + totalHBFS}</span></div>
-                <div class="stat-subtext">
-                    F1: <span class="copyable" title="Нажмите, чтобы скопировать" onclick="copyVal('${totalF1FS}', this)">${totalF1FS}</span> | 
-                    HB: <span class="copyable" title="Нажмите, чтобы скопировать" onclick="copyVal('${totalHBFS}', this)">${totalHBFS}</span>
+                <div>Фальшстарты (Всего акт.) <span style="font-size:0.75em; color:var(--accent-cyan); cursor:pointer; float:right;" onclick="toggleWeeklyStat(this, 'weekly-fs')">[ Неделя ]</span></div>
+                <div class="stat-value"><span class="copyable" onclick="copyVal('${totalF1FS + totalHBFS}', this)">${totalF1FS + totalHBFS}</span></div>
+                <div class="stat-subtext">F1: ${totalF1FS} | HB: ${totalHBFS}</div>
+                <div id="weekly-fs" style="display:none; margin-top:10px; padding-top:8px; border-top:1px dashed var(--border);">
+                    <div style="color: var(--accent-cyan); font-weight:bold; font-size:0.9em;">Всего за неделю (Акт.)</div>
+                    <div style="font-size:1.1em; font-weight:bold; color:var(--text-main);">${weekTotalFS}</div>
+                    <div style="font-size:0.8em; opacity:0.8;">За последние ${last7.length} активных дней</div>
                 </div>
-                ${getGrowthHTML(latest.f1.falseStarts + latest.hb.falseStarts, compareTarget.f1.falseStarts + compareTarget.hb.falseStarts, label)}
+            </div>
+            <div class="stat-card">
+                <div>Стабильность (День ${latest.day}) <span style="font-size:0.75em; color:var(--accent-cyan); cursor:pointer; float:right;" onclick="toggleWeeklyStat(this, 'weekly-stability')">[ Неделя ]</span></div>
+                <div class="stat-value">${dayDelta}мс</div>
+                <div class="stat-subtext">Дельта (Разброс Макс-Мин)</div>
+                <div id="weekly-stability" style="display:none; margin-top:10px; padding-top:8px; border-top:1px dashed var(--border);">
+                    <div style="color: var(--accent-cyan); font-weight:bold; font-size:0.9em;">Средняя дельта за неделю</div>
+                    <div style="font-size:1.1em; font-weight:bold; color:var(--text-main);">${weekMeanDelta}мс</div>
+                    <div style="font-size:0.8em; opacity:0.8;">За последние ${last7.length} активных дней</div>
+                </div>
             </div>
         `;
 
         tbody.innerHTML = '';
         [...experimentData].reverse().forEach((d) => {
             const originalIndex = d.day - 1;
+            
+            const totalT = tasksConfig.length;
+            let tasksRender = '';
+            if (d.tasks) {
+                const doneT = Object.values(d.tasks).filter(Boolean).length;
+                tasksRender = `<span class="copyable" onclick="showDayTasks(${originalIndex})" title="Нажмите для просмотра задач">${doneT}/${totalT}</span>`;
+            } else {
+                const osuDone = d.osu ? 1 : 0;
+                const kovDone = d.kovaaks ? 1 : 0;
+                const doneT = osuDone + kovDone;
+                tasksRender = `<span class="copyable" onclick="showDayTasks(${originalIndex})">${doneT}/${totalT}</span>`;
+            }
+
+            const trStyle = d.isWeekend ? 'opacity: 0.6; background: rgba(255,255,255,0.02);' : '';
+            const typeLabel = d.isWeekend ? '<span style="color:#f1c40f;">Выходной</span>' : 'Активный';
+
             tbody.innerHTML += `
-                <tr>
+                <tr style="${trStyle}">
                     <td>${d.day}</td>
+                    <td>${typeLabel}</td>
                     <td><strong>${d.total.mean}мс</strong> / ${d.total.min} / ${d.total.max}</td>
                     <td>${d.f1.mean} / ${d.f1.min} / ${d.f1.max}</td>
                     <td>${d.hb.mean} / ${d.hb.min} / ${d.hb.max}</td>
                     <td>${d.f1.falseStarts} / ${d.hb.falseStarts}</td>
-                    <td>${d.osu ? '✅' : '❌'} / ${d.kovaaks ? '✅' : '❌'}</td>
+                    <td>${tasksRender}</td>
                     <td>
                         <button class="action-btn btn-alt" onclick="editDay(${originalIndex})">✎</button>
                         <button class="action-btn" onclick="deleteDay(${originalIndex})">✖</button>
@@ -884,7 +1623,9 @@
     }
 
     function updateCharts() {
-        if (experimentData.length === 0) {
+        const activeData = experimentData.filter(d => !d.isWeekend);
+
+        if (activeData.length === 0) {
             if (reactionChartInstance) reactionChartInstance.destroy();
             if (falseStartsChartInstance) falseStartsChartInstance.destroy();
             return;
@@ -896,7 +1637,7 @@
         const cAcc1 = style.getPropertyValue('--accent-cyan').trim();
         const cAcc2 = style.getPropertyValue('--accent-teal').trim();
 
-        const labels = experimentData.map(d => `Д${d.day}`);
+        const labels = activeData.map(d => `Д${d.day}`);
         
         const ctxReaction = document.getElementById('reactionChart').getContext('2d');
         if (reactionChartInstance) reactionChartInstance.destroy();
@@ -905,33 +1646,14 @@
             data: {
                 labels,
                 datasets: [
-                    { 
-                        label: 'Общее Ср', 
-                        data: experimentData.map(d => d.total.mean), 
-                        borderColor: cText,
-                        backgroundColor: cText + '15',
-                        borderWidth: 2, fill: true, tension: 0.3, pointRadius: 2, pointHoverRadius: 5
-                    },
-                    { 
-                        label: 'F1 Ср', 
-                        data: experimentData.map(d => d.f1.mean), 
-                        borderColor: cAcc1,
-                        borderWidth: 1.5, borderDash: [5, 5], tension: 0.3, pointRadius: 0
-                    },
-                    { 
-                        label: 'HB Ср', 
-                        data: experimentData.map(d => d.hb.mean), 
-                        borderColor: cAcc2,
-                        borderWidth: 1.5, borderDash: [5, 5], tension: 0.3, pointRadius: 0
-                    }
+                    { label: 'Общее Ср', data: activeData.map(d => d.total.mean), borderColor: cText, backgroundColor: cText + '15', borderWidth: 2, fill: true, tension: 0.3, pointRadius: 2, pointHoverRadius: 5 },
+                    { label: 'F1 Ср', data: activeData.map(d => d.f1.mean), borderColor: cAcc1, borderWidth: 1.5, borderDash: [5, 5], tension: 0.3, pointRadius: 0 },
+                    { label: 'HB Ср', data: activeData.map(d => d.hb.mean), borderColor: cAcc2, borderWidth: 1.5, borderDash: [5, 5], tension: 0.3, pointRadius: 0 }
                 ]
             },
             options: {
                 responsive: true, maintainAspectRatio: false, color: cText,
-                scales: { 
-                    y: { grid: { color: cBorder }, ticks: { color: cText, callback: v => v+'мс' } }, 
-                    x: { grid: { color: cBorder }, ticks: { color: cText } } 
-                },
+                scales: { y: { grid: { color: cBorder }, ticks: { color: cText, callback: v => v+'мс' } }, x: { grid: { color: cBorder }, ticks: { color: cText } } },
                 plugins: { legend: { labels: { color: cText, font: { size: 10 } } }, tooltip: { mode: 'index', intersect: false } }
             }
         });
@@ -943,19 +1665,252 @@
             data: {
                 labels,
                 datasets: [
-                    { label: 'F1 ФС', data: experimentData.map(d => d.f1.falseStarts), backgroundColor: cAcc1 },
-                    { label: 'HB ФС', data: experimentData.map(d => d.hb.falseStarts), backgroundColor: cAcc2 }
+                    { label: 'F1 ФС', data: activeData.map(d => d.f1.falseStarts), backgroundColor: cAcc1 },
+                    { label: 'HB ФС', data: activeData.map(d => d.hb.falseStarts), backgroundColor: cAcc2 }
                 ]
             },
             options: {
                 responsive: true, maintainAspectRatio: false, color: cText,
-                scales: { 
-                    y: { stacked: true, grid: { color: cBorder }, ticks: { color: cText, stepSize: 1 } }, 
-                    x: { stacked: true, grid: { color: cBorder }, ticks: { color: cText } } 
-                },
+                scales: { y: { stacked: true, grid: { color: cBorder }, ticks: { color: cText, stepSize: 1 } }, x: { stacked: true, grid: { color: cBorder }, ticks: { color: cText } } },
                 plugins: { legend: { labels: { color: cText, font: { size: 10 } } } }
             }
         });
+    }
+
+    // --- REACTION TESTS MODULE ---
+    let currentTestType = 1; 
+    let testState = 'idle'; // idle, waiting, ready, blue_waiting, finished
+    let testStartMs = 0;
+    let testTimeoutId1 = null;
+    let testTimeoutId2 = null;
+    let f1IntervalId = null;
+
+    const colors = {
+        idle: '#2b87d1', waiting: '#ce2636', ready: '#4db052', fail: '#d94141', blue: '#1e52a8'
+    };
+
+    function openTestWindow() {
+        document.getElementById('testModalOverlay').classList.add('open');
+        document.getElementById('testModalOverlay').style.display = 'flex';
+        setTestType(1);
+    }
+
+    function closeTestWindow() {
+        document.getElementById('testModalOverlay').classList.remove('open');
+        setTimeout(() => document.getElementById('testModalOverlay').style.display = 'none', 300);
+        if (document.fullscreenElement) document.exitFullscreen().catch(()=>{});
+        resetTestState();
+    }
+
+    function toggleTestFullscreen() {
+        const elem = document.getElementById('test-modal-content');
+        if (!document.fullscreenElement) {
+            elem.requestFullscreen().catch(err => alert(`Ошибка полноэкранного режима: ${err.message}`));
+        } else {
+            document.exitFullscreen();
+        }
+    }
+
+    function toggleTestText() {
+        const isHidden = document.getElementById('hide-test-text').checked;
+        const area = document.getElementById('test-area');
+        if (isHidden) area.classList.add('hide-text');
+        else area.classList.remove('hide-text');
+    }
+
+    function toggleTestSessionInfo() {
+        const isHidden = document.getElementById('hide-test-session-info').checked;
+        const content = document.getElementById('test-modal-content');
+        if (isHidden) content.classList.add('hide-session-info');
+        else content.classList.remove('hide-session-info');
+    }
+
+    function toggleTestHeader() {
+        const isHidden = document.getElementById('hide-test-header').checked;
+        const content = document.getElementById('test-modal-content');
+        if (isHidden) content.classList.add('hide-header');
+        else content.classList.remove('hide-header');
+    }
+
+    function setTestType(type) {
+        currentTestType = type;
+        document.querySelectorAll('[id^="btn-test-"]').forEach(btn => btn.classList.remove('test-active-btn'));
+        document.getElementById(`btn-test-${type}`).classList.add('test-active-btn');
+        
+        const area = document.getElementById('test-area');
+        if (type === 2) {
+            area.classList.add('f1-mode');
+        } else {
+            area.classList.remove('f1-mode');
+        }
+
+        resetTestState();
+        updateTestSessionInfo();
+    }
+
+    function updateTestSessionInfo() {
+        const attempts = testAttempts[currentTestType];
+        const averages = testAverages[currentTestType];
+        const infoEl = document.getElementById('test-session-info');
+        if (infoEl) {
+            const attemptsList = attempts.length > 0 ? attempts.join(', ') : 'пусто';
+            infoEl.innerHTML = `Попытка: ${attempts.length}/5 в текущей серии [${attemptsList}] | Накоплено усредненных (${averages.length}/5): [${averages.join(', ')}]`;
+        }
+    }
+
+    function resetTestState() {
+        clearTimeout(testTimeoutId1);
+        clearTimeout(testTimeoutId2);
+        clearInterval(f1IntervalId);
+        testState = 'idle';
+        const area = document.getElementById('test-area');
+        area.classList.remove('finished');
+        const msg = document.getElementById('test-message');
+        const submsg = document.getElementById('test-submessage');
+        const f1Lights = document.getElementById('f1-lights');
+        
+        area.style.backgroundColor = colors.idle;
+        f1Lights.style.display = currentTestType === 2 ? 'flex' : 'none';
+        document.querySelectorAll('.f1-light').forEach(l => l.classList.remove('on'));
+
+        if (currentTestType === 1) {
+            msg.innerText = "Кликните чтобы начать";
+            submsg.innerText = "Классический тест";
+        } else if (currentTestType === 2) {
+            msg.innerText = "Кликните чтобы начать";
+            submsg.innerText = "Валттери Ботта: дождитесь выключения всех огней";
+        } else if (currentTestType === 3) {
+            msg.innerText = "Кликните чтобы начать";
+            submsg.innerText = "Если цвет зеленый - кликайте. Если синий - НЕ КЛИКАТЬ!";
+        }
+        updateTestSessionInfo();
+    }
+
+    function handleTestClick() {
+        const area = document.getElementById('test-area');
+        const msg = document.getElementById('test-message');
+        const submsg = document.getElementById('test-submessage');
+
+        if (testState === 'idle' || testState === 'finished') {
+            startTestSequence();
+        } else if (testState === 'waiting') {
+            clearTimeout(testTimeoutId1);
+            clearTimeout(testTimeoutId2);
+            clearInterval(f1IntervalId);
+            testState = 'finished';
+            area.classList.add('finished');
+            area.style.backgroundColor = colors.idle;
+            msg.innerText = "Слишком рано!";
+            submsg.innerText = "Фальшстарт. Кликните чтобы попробовать снова.";
+        } else if (testState === 'blue_waiting') {
+            clearTimeout(testTimeoutId1);
+            testState = 'finished';
+            area.classList.add('finished');
+            area.style.backgroundColor = colors.fail;
+            msg.innerText = "Ошибка!";
+            submsg.innerText = "Вы нажали на синий цвет. Кликните для перезапуска.";
+        } else if (testState === 'ready') {
+            const timeTaken = Date.now() - testStartMs;
+            testState = 'finished';
+            area.classList.add('finished');
+            area.style.backgroundColor = colors.idle;
+            
+            testAttempts[currentTestType].push(timeTaken);
+            const currentBlock = testAttempts[currentTestType];
+            
+            if (currentBlock.length === 5) {
+                const avg = Math.round(currentBlock.reduce((a,b)=>a+b,0) / currentBlock.length);
+                testAverages[currentTestType].push(avg);
+                testAttempts[currentTestType] = [];
+
+                navigator.clipboard.writeText(avg.toString()).catch(()=>{});
+                showToast(`Усредненное число скопировано: ${avg}`);
+
+                msg.innerText = `${timeTaken} мс (${avg})`;
+                submsg.innerText = `Блок из 5 попыток завершен. Число ${avg} скопировано. Клик для след. блока`;
+
+                if (testAverages[currentTestType].length === 5) {
+                    const finalArrStr = testAverages[currentTestType].join(' ');
+                    navigator.clipboard.writeText(finalArrStr).catch(()=>{});
+                    showToast(`Итоговый массив из 5 усредненных скопирован: ${finalArrStr}`);
+                    submsg.innerText = `Накоплено 5 усредненных! Итоговый массив [${finalArrStr}] скопирован.`;
+                    testAverages[currentTestType] = [];
+                }
+            } else {
+                msg.innerText = `${timeTaken} мс`;
+                submsg.innerText = `Попытка ${currentBlock.length}/5 в текущей серии. Кликните для следующей`;
+            }
+            updateTestSessionInfo();
+        }
+    }
+
+    function startTestSequence() {
+        const area = document.getElementById('test-area');
+        area.classList.remove('finished');
+        const msg = document.getElementById('test-message');
+        const submsg = document.getElementById('test-submessage');
+
+        testState = 'waiting';
+        msg.innerText = "Ждите...";
+        submsg.innerText = "";
+        
+        if (currentTestType === 1) {
+            area.style.backgroundColor = colors.waiting;
+            const delay = Math.random() * 3000 + 1500;
+            testTimeoutId1 = setTimeout(() => {
+                testState = 'ready';
+                area.style.backgroundColor = colors.ready;
+                msg.innerText = "КЛИКАЙ!";
+                testStartMs = Date.now();
+            }, delay);
+        } else if (currentTestType === 2) {
+            area.style.backgroundColor = colors.idle;
+            document.querySelectorAll('.f1-light').forEach(l => l.classList.remove('on'));
+            let lightsOn = 0;
+            
+            f1IntervalId = setInterval(() => {
+                if (lightsOn < 5) {
+                    document.querySelectorAll('.f1-light')[lightsOn].classList.add('on');
+                    lightsOn++;
+                } else {
+                    clearInterval(f1IntervalId);
+                    const outDelay = Math.random() * 2800 + 200;
+                    testTimeoutId1 = setTimeout(() => {
+                        document.querySelectorAll('.f1-light').forEach(l => l.classList.remove('on'));
+                        testState = 'ready';
+                        testStartMs = Date.now();
+                        msg.innerText = "КЛИКАЙ!";
+                    }, outDelay);
+                }
+            }, Math.random() * 200 + 900);
+        } else if (currentTestType === 3) {
+            area.style.backgroundColor = colors.waiting;
+            const delay = Math.random() * 3000 + 1500;
+            
+            testTimeoutId1 = setTimeout(() => {
+                const isBlue = Math.random() > 0.5;
+                if (isBlue) {
+                    testState = 'blue_waiting';
+                    area.style.backgroundColor = colors.blue;
+                    msg.innerText = "НЕ КЛИКАТЬ!";
+                    
+                    testTimeoutId2 = setTimeout(() => {
+                        if (testState === 'blue_waiting') {
+                            testState = 'finished';
+                            area.classList.add('finished');
+                            area.style.backgroundColor = colors.idle;
+                            msg.innerText = "Отлично!";
+                            submsg.innerText = "Вы не нажали. Кликните для продолжения.";
+                        }
+                    }, Math.random() * 500 + 1250);
+                } else {
+                    testState = 'ready';
+                    area.style.backgroundColor = colors.ready;
+                    msg.innerText = "КЛИКАЙ!";
+                    testStartMs = Date.now();
+                }
+            }, delay);
+        }
     }
 
     init();
