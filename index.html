@@ -303,6 +303,7 @@
             cursor: pointer; font-size: 3em; font-weight: bold; 
             transition: none !important; 
             position: relative; user-select: none; color: #fff; text-align: center;
+            background-color: #2b87d1;
         }
         .f1-lights-container { display: none; gap: 2vw; margin-bottom: 20px; }
         
@@ -330,12 +331,13 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
+            pointer-events: none;
         }
 
         .f1-light { width: 8vw; height: 8vw; max-width: 120px; max-height: 120px; border-radius: 50%; background: #333; border: 4px solid #111; transition: none !important; }
         .f1-light.on { background: #ff4c4c; box-shadow: 0 0 30px #ff4c4c; }
-        .hide-text:not(.finished) .test-text, .hide-text:not(.finished) .test-subtext { opacity: 0 !important; }
-        .test-subtext { font-size: 0.3em; margin-top: 10px; font-weight: normal; opacity: 0.7; }
+        .hide-text:not(.finished):not(.failed) .test-text, .hide-text:not(.finished):not(.failed) .test-subtext { opacity: 0 !important; }
+        .test-subtext { font-size: 0.35em; margin-top: 10px; font-weight: normal; }
         .test-active-btn { background: var(--accent-cyan) !important; color: var(--bg-color) !important; font-weight: bold; }
 
         .test-session-info {
@@ -399,7 +401,10 @@
     <div class="col col-left">
         <div class="panel panel-flex">
             <div class="form-header">
-                <h2 id="formTitle">Ввод данных за День <span id="currentDayLabel">1</span></h2>
+                <h2 id="formTitle" style="display:flex; align-items:center; flex-wrap:wrap; gap:8px;">
+                    <span id="formTitleText">Ввод данных за День</span>
+                    <input type="number" id="input-day-number" min="1" value="1" style="width:75px; padding:4px 8px; font-weight:bold; font-size:0.9em; text-align:center; background:rgba(0,0,0,0.3); border:1px solid var(--accent-cyan); color:var(--accent-cyan); border-radius:5px;">
+                </h2>
                 <div>
                     <button class="options-btn" id="btn-open-tests" onclick="openTestWindow()">⏱ Тесты</button>
                     <button class="options-btn" id="btn-open-options" onclick="openRegulations()">⚙ Опции</button>
@@ -507,6 +512,15 @@
                 <button class="options-btn" id="btn-test-3" onclick="setTestType(3)">Синий цвет (No-Go)</button>
             </div>
             <div style="display:flex; gap:15px; align-items:center; flex-wrap: wrap;">
+                <div style="display:flex; align-items:center; gap:6px;">
+                    <label for="test-autofill-mode" style="font-size:0.85em; cursor:pointer;" id="lbl-autofill-mode">Автозапись в ввод:</label>
+                    <select id="test-autofill-mode" class="dashboard-select" style="padding:4px 8px; font-size:0.8em;" onchange="changeAutoFillMode(this.value)">
+                        <option value="attempt" id="opt-af-attempt">Каждая попытка</option>
+                        <option value="each" id="opt-af-each">Каждый усредненный (1)</option>
+                        <option value="full5" id="opt-af-full5">Только массив (5 шт)</option>
+                        <option value="off" id="opt-af-off">Выключено</option>
+                    </select>
+                </div>
                 <label style="display:flex; align-items:center; gap:5px; cursor:pointer;">
                     <input type="checkbox" id="hide-test-text" onchange="toggleTestText()"> <span id="lbl-hide-text">Скрыть текст</span>
                 </label>
@@ -668,8 +682,16 @@
             </div>
 
             <div class="modal-section">
-                <h2 id="hdr-reg-7">7. УПРАВЛЕНИЕ ДАННЫМИ</h2>
-                <button class="btn-danger" id="btn-clear-data" onclick="clearData()">Сбросить все данные</button>
+                <h2 id="hdr-reg-7">7. УПРАВЛЕНИЕ ДАННЫМИ И РЕЗЕРВНЫЕ КОПИИ</h2>
+                <div style="display: flex; flex-direction: column; gap: 10px;">
+                    <button class="options-btn" id="btn-renumber" onclick="renumberDaysSequentially()">🔢 Перенумеровать дни по порядку (1, 2, 3...)</button>
+                    <div style="display: flex; gap: 10px;">
+                        <button class="options-btn" id="btn-export-data" onclick="exportDataJSON()" style="flex:1;">📥 Экспорт в JSON</button>
+                        <button class="options-btn" id="btn-import-data" onclick="importDataJSON()" style="flex:1;">📤 Импорт из JSON</button>
+                    </div>
+                    <input type="file" id="import-file-input" accept=".json" style="display:none;" onchange="handleFileImport(event)">
+                    <button class="btn-danger" id="btn-clear-data" onclick="clearData()">Сбросить все данные</button>
+                </div>
             </div>
 
         </div>
@@ -678,6 +700,7 @@
 
 <script>
     let currentLang = localStorage.getItem('reactionLang') || 'ru';
+    let autoFillMode = localStorage.getItem('reactionAutoFillMode') || 'each';
 
     const defaultTheme = {
         bg: '#0b0c10', panel: '#1f2833', acc1: '#66fcf1', acc2: '#45a29e', text: '#c5c6c7', border: '#333333'
@@ -704,6 +727,35 @@
         updateDashboard();
         updateTestSessionInfo();
         applyLanguage();
+
+        const autoFillSelect = document.getElementById('test-autofill-mode');
+        if (autoFillSelect) {
+            autoFillSelect.value = autoFillMode;
+        }
+    }
+
+    function changeAutoFillMode(mode) {
+        autoFillMode = mode;
+        localStorage.setItem('reactionAutoFillMode', mode);
+        const isEn = currentLang === 'en';
+        let modeName = '';
+        if (mode === 'attempt') modeName = isEn ? 'Every attempt' : 'Каждая попытка';
+        else if (mode === 'each') modeName = isEn ? 'Each average (1)' : 'Каждый усредненный (1)';
+        else if (mode === 'full5') modeName = isEn ? 'Block of 5 averages' : 'Только массив (5 шт)';
+        else modeName = isEn ? 'Disabled' : 'Выключено';
+        showToast(isEn ? `Auto-add mode: ${modeName}` : `Режим автозаписи: ${modeName}`);
+    }
+
+    function pushResultsToInput(type, values) {
+        if (type === 3) return; // No-Go никогда не пишется в поля ввода
+        if (!values || values.length === 0) return;
+        const inputId = (type === 2) ? 'f1-results' : 'hb-results';
+        const input = document.getElementById(inputId);
+        if (!input) return;
+        const currentVals = input.value.trim() ? input.value.trim().split(/\s+/) : [];
+        values.forEach(v => currentVals.push(v));
+        input.value = currentVals.join(' ');
+        checkFormInputs();
     }
 
     function renderTasksList() {
@@ -752,7 +804,7 @@
         const toast = document.getElementById('toast');
         toast.innerText = message;
         toast.classList.add('show');
-        setTimeout(() => toast.classList.remove('show'), 2000);
+        setTimeout(() => toast.classList.remove('show'), 2500);
     }
 
     function copyVal(val, el) {
@@ -864,12 +916,11 @@
         document.title = isEn ? "Experiment: Reaction Speed" : "Эксперимент: Скорость реакции";
         document.getElementById('toast').innerText = isEn ? "Text copied!" : "Текст скопирован!";
 
-        const currentDayNum = editIndex > -1 ? experimentData[editIndex].day : experimentData.length + 1;
         if (editIndex > -1) {
-            document.getElementById('formTitle').innerHTML = `${isEn ? 'Editing Day ' : 'Редактирование Дня '}<span id="currentDayLabel">${currentDayNum}</span>`;
+            document.getElementById('formTitleText').innerText = isEn ? 'Editing Day' : 'Редактирование Дня';
             document.getElementById('saveBtn').innerText = isEn ? "Update data" : "Обновить данные";
         } else {
-            document.getElementById('formTitle').innerHTML = `${isEn ? 'Data input for Day ' : 'Ввод данных за День '}<span id="currentDayLabel">${currentDayNum}</span>`;
+            document.getElementById('formTitleText').innerText = isEn ? 'Data input for Day' : 'Ввод данных за День';
             document.getElementById('saveBtn').innerText = isEn ? "Save results" : "Сохранить результаты";
         }
 
@@ -904,6 +955,12 @@
         document.getElementById('th-fs').innerText = isEn ? "FS (F1/HB)" : "ФС (F1/HB)";
         document.getElementById('th-tasks').innerText = isEn ? "Tasks" : "Задачи";
         document.getElementById('th-actions').innerText = isEn ? "Actions" : "Действия";
+
+        document.getElementById('lbl-autofill-mode').innerText = isEn ? "Auto-add to form:" : "Автозапись в ввод:";
+        document.getElementById('opt-af-attempt').innerText = isEn ? "Every attempt" : "Каждая попытка";
+        document.getElementById('opt-af-each').innerText = isEn ? "Each average (1)" : "Каждый усредненный (1)";
+        document.getElementById('opt-af-full5').innerText = isEn ? "Only block (5 avgs)" : "Только массив (5 шт)";
+        document.getElementById('opt-af-off').innerText = isEn ? "Disabled" : "Выключено";
 
         document.getElementById('btn-test-1').innerText = isEn ? "Human Benchmark" : "Human Benchmark";
         document.getElementById('btn-test-2').innerText = isEn ? "Valtteri Bottas (F1)" : "Валттери Ботта (F1)";
@@ -950,7 +1007,7 @@
         document.getElementById('td-reg-retake').innerHTML = `<strong>${isEn ? 'Retake' : 'Отработка'}</strong>`;
         document.getElementById('td-reg-retake-val').innerText = isEn ? "Missed days and incomplete sessions must be retaken" : "Пропущенные дни и неполные сессии подлежат отработке";
 
-        document.getElementById('hdr-reg-5').innerText = isEn ? "5. RANKS AND REACTION COMPARISON" : "5. РАНГИ И СРАВНЕНИЕ РЕАКЦИИ";
+        document.getElementById('hdr-reg-5').innerText = isEn ? "5. РАНГИ И СРАВНЕНИЕ РЕАКЦИИ" : "5. РАНГИ И СРАВНЕНИЕ РЕАКЦИИ";
         document.getElementById('th-rank-time').innerText = isEn ? "Time (ms)" : "Время (мс)";
         document.getElementById('th-rank-rank').innerText = isEn ? "Rank" : "Ранг";
         document.getElementById('th-rank-ref').innerText = isEn ? "Comparison / Reference" : "Сравнение / Ориентир";
@@ -977,7 +1034,10 @@
         document.getElementById('lbl-theme-border').innerText = isEn ? "Borders:" : "Границы:";
         document.getElementById('btn-reset-theme').innerText = isEn ? "Reset colors to default" : "Сбросить цвета по умолчанию";
 
-        document.getElementById('hdr-reg-7').innerText = isEn ? "7. DATA MANAGEMENT" : "7. УПРАВЛЕНИЕ ДАННЫМИ";
+        document.getElementById('hdr-reg-7').innerText = isEn ? "7. DATA MANAGEMENT & BACKUP" : "7. УПРАВЛЕНИЕ ДАННЫМИ И РЕЗЕРВНЫЕ КОПИИ";
+        document.getElementById('btn-renumber').innerText = isEn ? "🔢 Renumber days sequentially (1, 2, 3...)" : "🔢 Перенумеровать дни по порядку (1, 2, 3...)";
+        document.getElementById('btn-export-data').innerText = isEn ? "📥 Export to JSON" : "📥 Экспорт в JSON";
+        document.getElementById('btn-import-data').innerText = isEn ? "📤 Import from JSON" : "📤 Импорт из JSON";
         document.getElementById('btn-clear-data').innerText = isEn ? "Reset all data" : "Сбросить все данные";
 
         resetTestState();
@@ -993,15 +1053,27 @@
         };
     }
 
+    function getNextSuggestedDay() {
+        if (experimentData.length === 0) return 1;
+        const existingDays = new Set(experimentData.map(d => d.day));
+        let day = 1;
+        while (existingDays.has(day)) {
+            day++;
+        }
+        return day;
+    }
+
     function saveDay() {
         const f1Raw = document.getElementById('f1-results').value.trim();
         const hbRaw = document.getElementById('hb-results').value.trim();
         const f1Input = f1Raw.split(/\s+/).map(Number).filter(n => !isNaN(n) && n > 0);
         const hbInput = hbRaw.split(/\s+/).map(Number).filter(n => !isNaN(n) && n > 0);
         const isWeekend = document.getElementById('is-weekend').checked;
-        
+        const targetDay = parseInt(document.getElementById('input-day-number').value, 10) || getNextSuggestedDay();
+        const isEn = currentLang === 'en';
+
         if (f1Input.length === 0 || hbInput.length === 0) {
-            alert(currentLang === 'en' ? "Valid numerical values required (space-separated)." : "Требуются корректные числовые значения (через пробел).");
+            alert(isEn ? "Valid numerical values required (space-separated)." : "Требуются корректные числовые значения (через пробел).");
             return;
         }
 
@@ -1017,6 +1089,7 @@
         });
 
         const dayRecord = {
+            day: targetDay,
             f1Raw, hbRaw, f1: f1Stats, hb: hbStats,
             total: { 
                 mean: parseFloat(((f1Stats.mean + hbStats.mean) / 2).toFixed(2)), 
@@ -1027,15 +1100,22 @@
             tasks: tasksState
         };
 
-        if (editIndex > -1) {
-            dayRecord.day = experimentData[editIndex].day;
+        const existingIndex = experimentData.findIndex(d => d.day === targetDay);
+        if (existingIndex > -1 && existingIndex !== editIndex) {
+            const confirmOverwrite = confirm(isEn 
+                ? `Day ${targetDay} already exists. Do you want to overwrite its data?` 
+                : `День ${targetDay} уже существует. Перезаписать данные за этот день?`);
+            if (!confirmOverwrite) return;
+            experimentData[existingIndex] = dayRecord;
+        } else if (editIndex > -1) {
             experimentData[editIndex] = dayRecord;
         } else {
-            dayRecord.day = experimentData.length + 1;
             experimentData.push(dayRecord);
         }
 
+        experimentData.sort((a, b) => a.day - b.day);
         localStorage.setItem('reactionExperimentData', JSON.stringify(experimentData));
+        showToast(isEn ? `Day ${targetDay} saved!` : `День ${targetDay} сохранен!`);
         resetForm();
         updateDashboard();
     }
@@ -1043,6 +1123,7 @@
     function editDay(index) {
         editIndex = index;
         const data = experimentData[index];
+        if (!data) return;
         const isEn = currentLang === 'en';
         
         document.getElementById('f1-results').value = data.f1Raw || '';
@@ -1061,21 +1142,78 @@
             }
         });
         
-        document.getElementById('formTitle').innerHTML = `${isEn ? 'Editing Day ' : 'Редактирование Дня '}<span id="currentDayLabel">${data.day}</span>`;
+        document.getElementById('formTitleText').innerText = isEn ? 'Editing Day' : 'Редактирование Дня';
+        document.getElementById('input-day-number').value = data.day;
         document.getElementById('saveBtn').innerText = isEn ? "Update data" : "Обновить данные";
         document.getElementById('cancelEditBtn').style.display = "block";
         document.getElementById('clearInputBtn').classList.remove('visible');
     }
 
     function deleteDay(index) {
-        const msg = currentLang === 'en' ? `Delete Day ${experimentData[index].day}? Cannot be undone.` : `Удалить День ${experimentData[index].day}? Восстановление невозможно.`;
+        const d = experimentData[index];
+        if (!d) return;
+        const isEn = currentLang === 'en';
+        const msg = isEn ? `Delete Day ${d.day}? Cannot be undone.` : `Удалить День ${d.day}? Восстановление невозможно.`;
         if (confirm(msg)) {
             experimentData.splice(index, 1);
-            experimentData.forEach((d, i) => d.day = i + 1);
             localStorage.setItem('reactionExperimentData', JSON.stringify(experimentData));
             cancelEdit();
             updateDashboard();
         }
+    }
+
+    function renumberDaysSequentially() {
+        const isEn = currentLang === 'en';
+        if (experimentData.length === 0) return;
+        if (confirm(isEn ? "Renumber all saved days from 1 to N in order?" : "Перенумеровать все сохраненные дни по порядку от 1 до N?")) {
+            experimentData.sort((a, b) => a.day - b.day);
+            experimentData.forEach((d, i) => d.day = i + 1);
+            localStorage.setItem('reactionExperimentData', JSON.stringify(experimentData));
+            updateDashboard();
+            resetForm();
+            showToast(isEn ? "Days renumbered!" : "Дни перенумерованы!");
+        }
+    }
+
+    function exportDataJSON() {
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(experimentData, null, 2));
+        const downloadAnchor = document.createElement('a');
+        downloadAnchor.setAttribute("href", dataStr);
+        downloadAnchor.setAttribute("download", `reaction_stats_backup_${new Date().toISOString().slice(0,10)}.json`);
+        document.body.appendChild(downloadAnchor);
+        downloadAnchor.click();
+        downloadAnchor.remove();
+        showToast(currentLang === 'en' ? "Backup downloaded!" : "Резервная копия скачана!");
+    }
+
+    function importDataJSON() {
+        document.getElementById('import-file-input').click();
+    }
+
+    function handleFileImport(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        const isEn = currentLang === 'en';
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const parsed = JSON.parse(e.target.result);
+                if (Array.isArray(parsed)) {
+                    experimentData = parsed;
+                    experimentData.sort((a, b) => a.day - b.day);
+                    localStorage.setItem('reactionExperimentData', JSON.stringify(experimentData));
+                    updateDashboard();
+                    resetForm();
+                    showToast(isEn ? "Data successfully imported!" : "Данные успешно импортированы!");
+                } else {
+                    alert(isEn ? "Invalid JSON file format (expected array)." : "Неверный формат JSON (ожидался массив).");
+                }
+            } catch (err) {
+                alert(isEn ? "Error reading JSON: " + err.message : "Ошибка чтения JSON: " + err.message);
+            }
+        };
+        reader.readAsText(file);
+        event.target.value = '';
     }
 
     function cancelEdit() {
@@ -1092,7 +1230,9 @@
         document.getElementById('is-weekend').checked = false;
         document.querySelectorAll('.dynamic-task-checkbox').forEach(cb => cb.checked = false);
         
-        document.getElementById('formTitle').innerHTML = `${isEn ? 'Data input for Day ' : 'Ввод данных за День '}<span id="currentDayLabel">${experimentData.length + 1}</span>`;
+        const nextDay = getNextSuggestedDay();
+        document.getElementById('formTitleText').innerText = isEn ? 'Data input for Day' : 'Ввод данных за День';
+        document.getElementById('input-day-number').value = nextDay;
         document.getElementById('saveBtn').innerText = isEn ? "Save results" : "Сохранить результаты";
         document.getElementById('cancelEditBtn').style.display = "none";
         checkFormInputs();
@@ -1170,10 +1310,10 @@
                 html += `<li style="padding:8px 0; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;"><span>${tName}</span> ${status}</li>`;
             }
         } else {
-            const osuDone = d.osu ? `<span style="color:#4caf50; font-weight:bold;">${isEn ? 'Completed' : 'Выполнено'}</span>` : `<span style="color:#ff4c4c;">${isEn ? 'Не выполнено' : 'Не выполнено'}</span>`;
-            const kovDone = d.kovaaks ? `<span style="color:#4caf50; font-weight:bold;">${isEn ? 'Completed' : 'Выполнено'}</span>` : `<span style="color:#ff4c4c;">${isEn ? 'Не выполнено' : 'Не выполнено'}</span>`;
-            html += `<li style="padding:8px 0; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;"><span>Osu! HRDTHD (30 min)</span> ${osuDone}</li>`;
-            html += `<li style="padding:8px 0; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;"><span>Kovaak's (30 min)</span> ${kovDone}</li>`;
+            const osuDone = d.osu ? 1 : 0;
+            const kovDone = d.kovaaks ? 1 : 0;
+            html += `<li style="padding:8px 0; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;"><span>Osu! HRDTHD (30 min)</span> ${osuDone ? 'Completed' : 'Не выполнено'}</li>`;
+            html += `<li style="padding:8px 0; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;"><span>Kovaak's (30 min)</span> ${kovDone ? 'Completed' : 'Не выполнено'}</li>`;
         }
         html += `</ul>`;
 
@@ -1335,18 +1475,16 @@
 
         tbody.innerHTML = '';
         [...experimentData].reverse().forEach((d) => {
-            const originalIndex = d.day - 1;
-            
+            const actualIndex = experimentData.indexOf(d);
             const totalT = tasksConfig.length;
             let tasksRender = '';
             if (d.tasks) {
                 const doneT = Object.values(d.tasks).filter(Boolean).length;
-                tasksRender = `<span class="copyable" onclick="showDayTasks(${originalIndex})" title="${isEn ? 'Click to view tasks' : 'Нажмите для просмотра задач'}">${doneT}/${totalT}</span>`;
+                tasksRender = `<span class="copyable" onclick="showDayTasks(${actualIndex})" title="${isEn ? 'Click to view tasks' : 'Нажмите для просмотра задач'}">${doneT}/${totalT}</span>`;
             } else {
                 const osuDone = d.osu ? 1 : 0;
                 const kovDone = d.kovaaks ? 1 : 0;
-                const doneT = osuDone + kovDone;
-                tasksRender = `<span class="copyable" onclick="showDayTasks(${originalIndex})">${doneT}/${totalT}</span>`;
+                tasksRender = `<span class="copyable" onclick="showDayTasks(${actualIndex})">${osuDone + kovDone}/${totalT}</span>`;
             }
 
             const trStyle = d.isWeekend ? 'opacity: 0.6; background: rgba(255,255,255,0.02);' : '';
@@ -1362,8 +1500,8 @@
                     <td>${d.f1.falseStarts} / ${d.hb.falseStarts}</td>
                     <td>${tasksRender}</td>
                     <td>
-                        <button class="action-btn btn-alt" onclick="editDay(${originalIndex})">✎</button>
-                        <button class="action-btn" onclick="deleteDay(${originalIndex})">✖</button>
+                        <button class="action-btn btn-alt" onclick="editDay(${actualIndex})">✎</button>
+                        <button class="action-btn" onclick="deleteDay(${actualIndex})">✖</button>
                     </td>
                 </tr>
             `;
@@ -1523,7 +1661,7 @@
         testState = 'idle';
         const isEn = currentLang === 'en';
         const area = document.getElementById('test-area');
-        area.classList.remove('finished');
+        area.classList.remove('finished', 'failed');
         const msg = document.getElementById('test-message');
         const submsg = document.getElementById('test-submessage');
         const f1Lights = document.getElementById('f1-lights');
@@ -1546,6 +1684,203 @@
     }
 
     function handleTestClick() {
+        const area = document.getElementById('test-area');
+        const msg = document.getElementById('test-message');
+        const submsg = document.getElementById('test-submessage');
+        const isEn = currentLang === 'en';
+        const ms = isEn ? 'ms' : 'мс';
+
+        if (testState === 'idle' || testState === 'finished' || testState === 'fail') {
+            if (testAverages[currentTestType].length >= 5 && testAttempts[currentTestType].length === 0) {
+                testAverages[currentTestType] = [];
+                updateTestSessionInfo();
+            }
+
+            area.classList.remove('finished', 'failed');
+            if (currentTestType === 1) {
+                testState = 'waiting';
+                area.style.backgroundColor = colors.waiting;
+                msg.innerText = isEn ? "Wait for green..." : "Ждите зеленый...";
+                submsg.innerText = "";
+                const randomTime = Math.random() * 3000 + 2000;
+                testTimeoutId1 = setTimeout(() => {
+                    testState = 'ready';
+                    area.style.backgroundColor = colors.ready;
+                    msg.innerText = isEn ? "CLICK NOW!" : "КЛИКАЙ!";
+                    testStartMs = performance.now();
+                }, randomTime);
+            } else if (currentTestType === 2) {
+                testState = 'waiting';
+                area.style.backgroundColor = colors.idle;
+                msg.innerText = isEn ? "Lights turning on..." : "Загораются огни...";
+                submsg.innerText = "";
+                
+                let lightIndex = 0;
+                const lights = document.querySelectorAll('.f1-light');
+                lights.forEach(l => l.classList.remove('on'));
+
+                f1IntervalId = setInterval(() => {
+                    if (lightIndex < 5) {
+                        lights[lightIndex].classList.add('on');
+                        lightIndex++;
+                    } else {
+                        clearInterval(f1IntervalId);
+                        const randomTime = Math.random() * 2000 + 1000;
+                        testTimeoutId1 = setTimeout(() => {
+                            lights.forEach(l => l.classList.remove('on'));
+                            testState = 'ready';
+                            area.style.backgroundColor = colors.idle;
+                            msg.innerText = isEn ? "GO!" : "ПУСК!";
+                            testStartMs = performance.now();
+                        }, randomTime);
+                    }
+                }, 1000);
+            } else if (currentTestType === 3) {
+                testState = 'waiting';
+                area.style.backgroundColor = colors.waiting;
+                msg.innerText = isEn ? "Wait..." : "Ожидание...";
+                submsg.innerText = "";
+                const randomTime = Math.random() * 3000 + 2000;
+                const isBlue = Math.random() < 0.3;
+                testTimeoutId1 = setTimeout(() => {
+                    if (isBlue) {
+                        testState = 'blue';
+                        area.style.backgroundColor = colors.blue;
+                        msg.innerText = isEn ? "BLUE! DON'T CLICK!" : "СИНИЙ! НЕ КЛИКАЙ!";
+                        testTimeoutId2 = setTimeout(() => {
+                            if (testState === 'blue') {
+                                msg.innerText = isEn ? "Good! Avoided blue" : "Отлично! Не кликнули на синий";
+                                submsg.innerText = isEn ? "Click to continue" : "Кликните для продолжения";
+                                area.style.backgroundColor = colors.idle;
+                                area.classList.add('finished');
+                                testState = 'finished';
+                            }
+                        }, 1500);
+                    } else {
+                        testState = 'ready';
+                        area.style.backgroundColor = colors.ready;
+                        msg.innerText = isEn ? "CLICK!" : "КЛИКАЙ!";
+                        testStartMs = performance.now();
+                    }
+                }, randomTime);
+            }
+        } else if (testState === 'waiting') {
+            clearTimeout(testTimeoutId1);
+            clearInterval(f1IntervalId);
+            testState = 'fail';
+            area.classList.add('failed');
+            area.style.backgroundColor = colors.fail;
+            msg.innerText = isEn ? "Too soon!" : "Фальшстарт!";
+            submsg.innerText = isEn ? "Click to try again" : "Кликните для повтора";
+        } else if (testState === 'blue') {
+            clearTimeout(testTimeoutId2);
+            testState = 'fail';
+            area.classList.add('failed');
+            area.style.backgroundColor = colors.fail;
+            msg.innerText = isEn ? "Mistake! It was blue!" : "Ошибка! Это был синий цвет!";
+            submsg.innerText = isEn ? "Click to try again" : "Кликните для повтора";
+        } else if (testState === 'ready') {
+            const reactionTime = Math.round(performance.now() - testStartMs);
+            testState = 'finished';
+            area.classList.add('finished');
+            area.style.backgroundColor = colors.idle;
+
+            testAttempts[currentTestType].push(reactionTime);
+
+            if (autoFillMode === 'attempt' && currentTestType !== 3) {
+                pushResultsToInput(currentTestType, [reactionTime]);
+            }
+            
+            if (testAttempts[currentTestType].length === 5) {
+                const avg = Math.round(testAttempts[currentTestType].reduce((a, b) => a + b, 0) / 5);
+                testAverages[currentTestType].push(avg);
+                
+                if (currentTestType !== 3) {
+                    if (autoFillMode === 'each') {
+                        pushResultsToInput(currentTestType, [avg]);
+                    } else if (autoFillMode === 'full5') {
+                        if (testAverages[currentTestType].length === 5) {
+                            pushResultsToInput(currentTestType, [...testAverages[currentTestType]]);
+                        }
+                    }
+                }
+
+                testAttempts[currentTestType] = [];
+
+                if (testAverages[currentTestType].length === 5) {
+                    const totalAvg = Math.round(testAverages[currentTestType].reduce((a, b) => a + b, 0) / 5);
+                    msg.innerHTML = isEn ? "🎯 5/5 AVERAGES COLLECTED!" : "🎯 5/5 УСРЕДНЕННЫХ НАКОПЛЕНО!";
+                    
+                    let autoFillNote = '';
+                    if (currentTestType === 3) {
+                        autoFillNote = isEn ? 'Training test (No-Go): results are not added to stats.' : 'Тренировочный тест (No-Go): результаты не вносятся в статистику.';
+                    } else if (autoFillMode === 'full5') {
+                        autoFillNote = isEn ? 'Block of 5 averages added to the form!' : 'Все 5 усредненных результатов записаны в форму!';
+                    } else if (autoFillMode === 'each') {
+                        autoFillNote = isEn ? 'All 5 averages were added to the form!' : 'Все 5 усредненных результатов добавлены в форму!';
+                    } else if (autoFillMode === 'attempt') {
+                        autoFillNote = isEn ? 'All individual attempts were added to the form!' : 'Все индивидуальные попытки добавлены в форму!';
+                    } else {
+                        autoFillNote = isEn ? 'Auto-add is disabled (results not sent to form).' : 'Автозапись отключена (в форму не отправлено).';
+                    }
+
+                    submsg.innerHTML = `
+                        <div style="background: rgba(76, 175, 80, 0.25); border: 2px solid #4caf50; border-radius: 10px; padding: 15px 25px; margin-top: 15px; display: inline-block; box-shadow: 0 0 25px rgba(76, 175, 80, 0.4);">
+                            <div style="color: #4caf50; font-weight: bold; font-size: 1.25em;">
+                                🏆 ${isEn ? 'Daily set of 5 averages completed!' : 'Полный блок из 5 усредненных результатов готов!'}
+                            </div>
+                            <div style="color: #fff; font-size: 1em; margin-top: 6px;">
+                                ${isEn ? 'Latest set average:' : 'Среднее последней серии:'} <strong>${avg} ${ms}</strong>
+                            </div>
+                            <div style="color: var(--text-main); font-size: 0.9em; margin-top: 4px;">
+                                ${isEn ? 'All 5 averages:' : 'Все 5 значений:'} [<strong>${testAverages[currentTestType].join(', ')}</strong> ${ms}]
+                            </div>
+                            <div style="color: var(--accent-cyan); font-weight: bold; font-size: 1.05em; margin-top: 6px;">
+                                ${isEn ? 'Total block average:' : 'Общее среднее блока:'} ${totalAvg} ${ms}
+                            </div>
+                        </div>
+                        <div style="margin-top: 12px; font-size: 0.85em; opacity: 0.9; color: var(--accent-cyan);">
+                            ${autoFillNote}<br>${isEn ? 'Click anywhere to start a new set' : 'Кликните, чтобы начать новый блок'}
+                        </div>
+                    `;
+                    showToast(isEn ? `🎉 5/5 block complete! (${totalAvg} ${ms})` : `🎉 Блок из 5 усредненных готов! (${totalAvg} ${ms})`);
+                } else {
+                    msg.innerText = `${reactionTime} ${ms}`;
+                    
+                    let eachNote = '';
+                    if (currentTestType === 3) {
+                        eachNote = '';
+                    } else if (autoFillMode === 'each') {
+                        eachNote = isEn ? ' (added to form)' : ' (добавлено в форму)';
+                    } else if (autoFillMode === 'full5') {
+                        eachNote = isEn ? ' (will add after 5/5)' : ' (запишется после 5/5)';
+                    } else if (autoFillMode === 'attempt') {
+                        eachNote = isEn ? ' (attempt added to form)' : ' (попытка добавлена)';
+                    }
+
+                    submsg.innerHTML = `
+                        <div style="background: rgba(0,0,0,0.45); border: 1px solid var(--accent-cyan); border-radius: 8px; padding: 10px 20px; margin-top: 12px; display: inline-block;">
+                            <div style="color: var(--accent-cyan); font-weight: bold; font-size: 1.15em;">
+                                ⚡ ${isEn ? 'Set Complete! Average:' : 'Серия завершена! Среднее:'} ${avg} ${ms}${eachNote}
+                            </div>
+                            <div style="color: var(--text-main); font-size: 0.85em; margin-top: 4px;">
+                                ${isEn ? 'Averages collected:' : 'Накоплено усредненных:'} <strong>${testAverages[currentTestType].length}/5</strong> [${testAverages[currentTestType].join(', ')}]
+                            </div>
+                        </div>
+                        <div style="margin-top: 10px; font-size: 0.85em; opacity: 0.8;">
+                            ${isEn ? 'Click to continue to next set' : 'Кликните для перехода к следующей серии'}
+                        </div>
+                    `;
+                    showToast(isEn ? `⚡ Average #${testAverages[currentTestType].length} (${avg} ${ms}) recorded!` : `⚡ Среднее #${testAverages[currentTestType].length} (${avg} ${ms}) зафиксировано!`);
+                }
+            } else {
+                let attemptSuffix = (autoFillMode === 'attempt' && currentTestType !== 3) ? (isEn ? ' (added)' : ' (записано)') : '';
+                msg.innerText = `${reactionTime} ${ms}`;
+                submsg.innerText = `${isEn ? 'Attempt' : 'Попытка'} ${testAttempts[currentTestType].length}/5${attemptSuffix}. ${isEn ? 'Click to continue' : 'Кликните для продолжения'}`;
+            }
+
+            updateTestSessionInfo();
+        }
     }
 
     window.onload = init;
