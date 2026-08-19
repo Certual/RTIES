@@ -506,10 +506,11 @@
     <div class="modal-content" id="test-modal-content">
         <div class="test-top-trigger" id="testTopTrigger"></div>
         <div class="test-header">
-            <div style="display: flex; gap: 10px;">
+            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
                 <button class="options-btn test-active-btn" id="btn-test-1" onclick="setTestType(1)">Human Benchmark</button>
                 <button class="options-btn" id="btn-test-2" onclick="setTestType(2)">Валттери Ботта (F1)</button>
                 <button class="options-btn" id="btn-test-3" onclick="setTestType(3)">Синий цвет (No-Go)</button>
+                <button class="options-btn" id="btn-test-4" onclick="setTestType(4)">Аудио реакция (Звук)</button>
             </div>
             <div style="display:flex; gap:15px; align-items:center; flex-wrap: wrap;">
                 <div style="display:flex; align-items:center; gap:6px;">
@@ -669,7 +670,9 @@
             <hr style="border-color: var(--border); margin: 25px 0;">
 
             <div class="modal-section">
-                <h2 id="hdr-reg-6">6. НАСТРОЙКИ ИНТЕРФЕЙСА</h2>
+                <h2 id="hdr-reg-6">6. НАСТРОЙКИ ИНТЕРФЕЙСА И ЦВЕТОВ</h2>
+                
+                <h3 id="hdr-theme-main" style="font-size: 0.95em; color: var(--accent-cyan); margin-bottom: 8px;">6.1 Основные цвета интерфейса:</h3>
                 <div class="theme-grid">
                     <div class="color-picker-group"><label id="lbl-theme-bg">Фон сайта:</label><input type="color" id="color-bg" value="#0b0c10" onchange="updateTheme()"></div>
                     <div class="color-picker-group"><label id="lbl-theme-panel">Фон панелей:</label><input type="color" id="color-panel" value="#1f2833" onchange="updateTheme()"></div>
@@ -678,11 +681,35 @@
                     <div class="color-picker-group"><label id="lbl-theme-text">Текст и Заголовки:</label><input type="color" id="color-text" value="#c5c6c7" onchange="updateTheme()"></div>
                     <div class="color-picker-group"><label id="lbl-theme-border">Границы:</label><input type="color" id="color-border" value="#333333" onchange="updateTheme()"></div>
                 </div>
-                <button class="btn-alt" id="btn-reset-theme" onclick="resetTheme()" style="margin-top: 5px;">Сбросить цвета по умолчанию</button>
+                <button class="btn-alt" id="btn-reset-theme" onclick="resetTheme()" style="margin-bottom: 20px;">Сбросить цвета темы по умолчанию</button>
+
+                <h3 id="hdr-theme-tests" style="font-size: 0.95em; color: var(--accent-cyan); margin-bottom: 8px;">6.2 Цвета экранов тестирования:</h3>
+                <div class="theme-grid">
+                    <div class="color-picker-group"><label id="lbl-test-idle">Экран старта (Idle):</label><input type="color" id="color-test-idle" value="#2b87d1" onchange="updateTestColors()"></div>
+                    <div class="color-picker-group"><label id="lbl-test-waiting">Ожидание сигнала (Wait):</label><input type="color" id="color-test-waiting" value="#ce2636" onchange="updateTestColors()"></div>
+                    <div class="color-picker-group"><label id="lbl-test-ready">Сигнал к нажатию (Ready):</label><input type="color" id="color-test-ready" value="#4db052" onchange="updateTestColors()"></div>
+                    <div class="color-picker-group"><label id="lbl-test-fail">Фальшстарт / Ошибка (Fail):</label><input type="color" id="color-test-fail" value="#d94141" onchange="updateTestColors()"></div>
+                    <div class="color-picker-group" style="grid-column: 1 / -1;"><label id="lbl-test-blue">Ложная цель No-Go (Синий):</label><input type="color" id="color-test-blue" value="#1e52a8" onchange="updateTestColors()"></div>
+                </div>
+                <button class="btn-alt" id="btn-reset-test-colors" onclick="resetTestColors()">Сбросить цвета тестов по умолчанию</button>
             </div>
 
             <div class="modal-section">
-                <h2 id="hdr-reg-7">7. УПРАВЛЕНИЕ ДАННЫМИ И РЕЗЕРВНЫЕ КОПИИ</h2>
+                <h2 id="hdr-reg-audio">7. НАСТРОЙКИ АУДИО ТЕСТА</h2>
+                <div style="background: rgba(0,0,0,0.25); padding: 12px; border-radius: 6px; border: 1px solid var(--border); margin-bottom: 15px;">
+                    <div id="audio-custom-status" style="font-weight: bold; font-size: 0.9em; margin-bottom: 8px;"></div>
+                    <div style="font-size: 0.8em; opacity: 0.8;" id="audio-custom-desc">Вы можете загрузить собственный короткий звук (MP3, WAV, OGG) для тренировки слуховой реакции с нулевой задержкой.</div>
+                </div>
+                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                    <button class="options-btn btn-alt" id="btn-upload-audio" onclick="document.getElementById('custom-audio-input').click()" style="flex:1;">🎵 Загрузить свой аудиофайл</button>
+                    <button class="options-btn" id="btn-preview-audio" onclick="playAudioSignal()" style="flex:1;">▶ Прослушать звук</button>
+                    <button class="options-btn btn-danger" id="btn-reset-audio" onclick="resetStockAudio()" style="flex:1;">🔄 Сбросить на стоковый звук</button>
+                </div>
+                <input type="file" id="custom-audio-input" accept="audio/*" style="display:none;" onchange="handleAudioUpload(event)">
+            </div>
+
+            <div class="modal-section">
+                <h2 id="hdr-reg-8">8. УПРАВЛЕНИЕ ДАННЫМИ И РЕЗЕРВНЫЕ КОПИИ</h2>
                 <div style="display: flex; flex-direction: column; gap: 10px;">
                     <button class="options-btn" id="btn-renumber" onclick="renumberDaysSequentially()">🔢 Перенумеровать дни по порядку (1, 2, 3...)</button>
                     <div style="display: flex; gap: 10px;">
@@ -705,18 +732,165 @@
     const defaultTheme = {
         bg: '#0b0c10', panel: '#1f2833', acc1: '#66fcf1', acc2: '#45a29e', text: '#c5c6c7', border: '#333333'
     };
+    
+    const defaultTestColors = {
+        idle: '#2b87d1', waiting: '#ce2636', ready: '#4db052', fail: '#d94141', blue: '#1e52a8'
+    };
+
     const defaultTasks = ["Osu HRDTHD (30 мин) (Опционально)", "Kovaak's (30 мин)"];
 
     let experimentData = JSON.parse(localStorage.getItem('reactionExperimentData')) || [];
     let customTheme = JSON.parse(localStorage.getItem('reactionCustomTheme')) || defaultTheme;
+    let customTestColors = JSON.parse(localStorage.getItem('reactionTestColors')) || { ...defaultTestColors };
     let tasksConfig = JSON.parse(localStorage.getItem('reactionTasksConfig')) || defaultTasks;
     
     let reactionChartInstance = null;
     let falseStartsChartInstance = null;
     let editIndex = -1;
 
-    let testAttempts = { 1: [], 2: [], 3: [] };
-    let testAverages = { 1: [], 2: [], 3: [] };
+    let testAttempts = { 1: [], 2: [], 3: [], 4: [] };
+    let testAverages = { 1: [], 2: [], 3: [], 4: [] };
+    
+    let audioCtx = null;
+    let customAudioBuffer = null;
+    let customAudioName = localStorage.getItem('reactionCustomAudioName') || '';
+
+    function getAudioContext() {
+        if (!audioCtx) {
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            if (AudioContext) {
+                audioCtx = new AudioContext();
+            }
+        }
+        if (audioCtx && audioCtx.state === 'suspended') {
+            audioCtx.resume();
+        }
+        return audioCtx;
+    }
+
+    function initCustomAudio() {
+        const base64 = localStorage.getItem('reactionCustomAudioBase64');
+        if (base64) {
+            try {
+                const binaryString = atob(base64.split(',')[1] || base64);
+                const len = binaryString.length;
+                const bytes = new Uint8Array(len);
+                for (let i = 0; i < len; i++) {
+                    bytes[i] = binaryString.charCodeAt(i);
+                }
+                const ctx = getAudioContext();
+                if (ctx) {
+                    ctx.decodeAudioData(bytes.buffer.slice(0), (decoded) => {
+                        customAudioBuffer = decoded;
+                        updateAudioUIStatus();
+                    }, (e) => {
+                        console.error("Decode error", e);
+                        customAudioBuffer = null;
+                        updateAudioUIStatus();
+                    });
+                }
+            } catch (err) {
+                console.error("Base64 decode error", err);
+                customAudioBuffer = null;
+                updateAudioUIStatus();
+            }
+        } else {
+            updateAudioUIStatus();
+        }
+    }
+
+    function playAudioSignal() {
+        try {
+            const ctx = getAudioContext();
+            if (!ctx) return;
+
+            if (customAudioBuffer) {
+                const source = ctx.createBufferSource();
+                source.buffer = customAudioBuffer;
+                source.connect(ctx.destination);
+                source.start(0);
+                return;
+            }
+
+            const now = ctx.currentTime;
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(950, now);
+            osc.frequency.exponentialRampToValueAtTime(800, now + 0.008);
+            
+            gain.gain.setValueAtTime(0.0001, now);
+            gain.gain.linearRampToValueAtTime(0.28, now + 0.001);
+            gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.075);
+            
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            
+            osc.start(now);
+            osc.stop(now + 0.08);
+        } catch (e) {
+            console.error("Audio error:", e);
+        }
+    }
+
+    function handleAudioUpload(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        const isEn = currentLang === 'en';
+
+        if (file.size > 5 * 1024 * 1024) {
+            alert(isEn ? "File is too large (max 5MB)." : "Файл слишком большой (максимум 5 МБ).");
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const base64 = e.target.result;
+            const ctx = getAudioContext();
+            
+            const arrayBufferReader = new FileReader();
+            arrayBufferReader.onload = function(abEvent) {
+                const arrayBuffer = abEvent.target.result;
+                ctx.decodeAudioData(arrayBuffer, (decoded) => {
+                    customAudioBuffer = decoded;
+                    customAudioName = file.name;
+                    localStorage.setItem('reactionCustomAudioBase64', base64);
+                    localStorage.setItem('reactionCustomAudioName', file.name);
+                    updateAudioUIStatus();
+                    showToast(isEn ? `Custom audio "${file.name}" loaded!` : `Аудио "${file.name}" загружено!`);
+                    playAudioSignal();
+                }, (decodeErr) => {
+                    alert(isEn ? "Failed to decode audio file." : "Не удалось декодировать аудиофайл.");
+                });
+            };
+            arrayBufferReader.readAsArrayBuffer(file);
+        };
+        reader.readAsDataURL(file);
+        event.target.value = '';
+    }
+
+    function resetStockAudio() {
+        const isEn = currentLang === 'en';
+        customAudioBuffer = null;
+        customAudioName = '';
+        localStorage.removeItem('reactionCustomAudioBase64');
+        localStorage.removeItem('reactionCustomAudioName');
+        updateAudioUIStatus();
+        showToast(isEn ? "Reset to stock synthesized audio!" : "Возвращен стоковый синтезированный звук!");
+        playAudioSignal();
+    }
+
+    function updateAudioUIStatus() {
+        const statusEl = document.getElementById('audio-custom-status');
+        if (!statusEl) return;
+        const isEn = currentLang === 'en';
+        if (customAudioName && customAudioBuffer) {
+            statusEl.innerHTML = `<span style="color:var(--accent-cyan);">🎵 ${isEn ? 'Current audio:' : 'Текущий звук:'}</span> ${customAudioName}`;
+        } else {
+            statusEl.innerHTML = `<span style="color:var(--accent-teal);">⚡ ${isEn ? 'Current audio: Stock synthesized tone (950Hz)' : 'Текущий звук: Стоковый синтезированный тон (950 Гц)'}</span>`;
+        }
+    }
 
     function init() {
         loadThemeInputs();
@@ -726,6 +900,7 @@
         resetForm();
         updateDashboard();
         updateTestSessionInfo();
+        initCustomAudio();
         applyLanguage();
 
         const autoFillSelect = document.getElementById('test-autofill-mode');
@@ -747,7 +922,7 @@
     }
 
     function pushResultsToInput(type, values) {
-        if (type === 3) return; // No-Go никогда не пишется в поля ввода
+        if (type === 3 || type === 4) return;
         if (!values || values.length === 0) return;
         const inputId = (type === 2) ? 'f1-results' : 'hb-results';
         const input = document.getElementById(inputId);
@@ -845,6 +1020,12 @@
         document.getElementById('color-accent2').value = customTheme.acc2;
         document.getElementById('color-text').value = customTheme.text;
         document.getElementById('color-border').value = customTheme.border;
+
+        document.getElementById('color-test-idle').value = customTestColors.idle;
+        document.getElementById('color-test-waiting').value = customTestColors.waiting;
+        document.getElementById('color-test-ready').value = customTestColors.ready;
+        document.getElementById('color-test-fail').value = customTestColors.fail;
+        document.getElementById('color-test-blue').value = customTestColors.blue;
     }
 
     function updateTheme() {
@@ -860,11 +1041,35 @@
         applyThemeCSS();
     }
 
+    function updateTestColors() {
+        customTestColors = {
+            idle: document.getElementById('color-test-idle').value,
+            waiting: document.getElementById('color-test-waiting').value,
+            ready: document.getElementById('color-test-ready').value,
+            fail: document.getElementById('color-test-fail').value,
+            blue: document.getElementById('color-test-blue').value
+        };
+        localStorage.setItem('reactionTestColors', JSON.stringify(customTestColors));
+        if (testState === 'idle' || testState === 'finished') {
+            document.getElementById('test-area').style.backgroundColor = customTestColors.idle;
+        }
+    }
+
     function resetTheme() {
         customTheme = { ...defaultTheme };
         localStorage.setItem('reactionCustomTheme', JSON.stringify(customTheme));
         loadThemeInputs();
         applyThemeCSS();
+    }
+
+    function resetTestColors() {
+        customTestColors = { ...defaultTestColors };
+        localStorage.setItem('reactionTestColors', JSON.stringify(customTestColors));
+        loadThemeInputs();
+        if (testState === 'idle' || testState === 'finished') {
+            document.getElementById('test-area').style.backgroundColor = customTestColors.idle;
+        }
+        showToast(currentLang === 'en' ? "Test colors reset to default!" : "Цвета тестов сброшены по умолчанию!");
     }
 
     function applyThemeCSS() {
@@ -965,6 +1170,7 @@
         document.getElementById('btn-test-1').innerText = isEn ? "Human Benchmark" : "Human Benchmark";
         document.getElementById('btn-test-2').innerText = isEn ? "Valtteri Bottas (F1)" : "Валттери Ботта (F1)";
         document.getElementById('btn-test-3').innerText = isEn ? "Blue color (No-Go)" : "Синий цвет (No-Go)";
+        document.getElementById('btn-test-4').innerText = isEn ? "Audio Reaction" : "Аудио реакция (Звук)";
         document.getElementById('lbl-hide-text').innerText = isEn ? "Hide text" : "Скрыть текст";
         document.getElementById('lbl-hide-session').innerText = isEn ? "Hide session info" : "Скрыть попытки в серии";
         document.getElementById('lbl-hide-panel').innerText = isEn ? "Hide panel" : "Скрыть панель";
@@ -1025,21 +1231,39 @@
         document.getElementById('r6-name').innerHTML = `<strong>${isEn ? 'Slow' : 'Замедленная'}</strong>`;
         document.getElementById('r6-desc').innerText = isEn ? "Severe fatigue / lack of concentration" : "Сильное утомление / отсутствие концентрации";
 
-        document.getElementById('hdr-reg-6').innerText = isEn ? "6. INTERFACE SETTINGS" : "6. НАСТРОЙКИ ИНТЕРФЕЙСА";
+        document.getElementById('hdr-reg-6').innerText = isEn ? "6. INTERFACE & COLOR SETTINGS" : "6. НАСТРОЙКИ ИНТЕРФЕЙСА И ЦВЕТОВ";
+        document.getElementById('hdr-theme-main').innerText = isEn ? "6.1 General theme colors:" : "6.1 Основные цвета интерфейса:";
         document.getElementById('lbl-theme-bg').innerText = isEn ? "Site background:" : "Фон сайта:";
         document.getElementById('lbl-theme-panel').innerText = isEn ? "Panel background:" : "Фон панелей:";
         document.getElementById('lbl-theme-acc1').innerText = isEn ? "Accent 1 (Charts/F1):" : "Акцент 1 (Графики/F1):";
         document.getElementById('lbl-theme-acc2').innerText = isEn ? "Accent 2 (Markers/HB):" : "Акцент 2 (Маркеры/HB):";
         document.getElementById('lbl-theme-text').innerText = isEn ? "Text & Headers:" : "Текст и Заголовки:";
         document.getElementById('lbl-theme-border').innerText = isEn ? "Borders:" : "Границы:";
-        document.getElementById('btn-reset-theme').innerText = isEn ? "Reset colors to default" : "Сбросить цвета по умолчанию";
+        document.getElementById('btn-reset-theme').innerText = isEn ? "Reset theme colors to default" : "Сбросить цвета темы по умолчанию";
 
-        document.getElementById('hdr-reg-7').innerText = isEn ? "7. DATA MANAGEMENT & BACKUP" : "7. УПРАВЛЕНИЕ ДАННЫМИ И РЕЗЕРВНЫЕ КОПИИ";
+        document.getElementById('hdr-theme-tests').innerText = isEn ? "6.2 Test screen colors:" : "6.2 Цвета экранов тестирования:";
+        document.getElementById('lbl-test-idle').innerText = isEn ? "Start Screen (Idle):" : "Экран старта (Idle):";
+        document.getElementById('lbl-test-waiting').innerText = isEn ? "Waiting Signal (Wait):" : "Ожидание сигнала (Wait):";
+        document.getElementById('lbl-test-ready').innerText = isEn ? "Click Signal (Ready):" : "Сигнал к нажатию (Ready):";
+        document.getElementById('lbl-test-fail').innerText = isEn ? "False Start / Fail:" : "Фальшстарт / Ошибка (Fail):";
+        document.getElementById('lbl-test-blue').innerText = isEn ? "No-Go False Target (Blue):" : "Ложная цель No-Go (Синий):";
+        document.getElementById('btn-reset-test-colors').innerText = isEn ? "Reset test colors to default" : "Сбросить цвета тестов по умолчанию";
+
+        document.getElementById('hdr-reg-audio').innerText = isEn ? "7. AUDIO TEST SETTINGS" : "7. НАСТРОЙКИ АУДИО ТЕСТА";
+        document.getElementById('audio-custom-desc').innerText = isEn 
+            ? "Upload your own custom sound effect (MP3, WAV, OGG) for reaction training with zero latency." 
+            : "Вы можете загрузить собственный короткий звук (MP3, WAV, OGG) для тренировки слуховой реакции с нулевой задержкой.";
+        document.getElementById('btn-upload-audio').innerText = isEn ? "🎵 Upload custom audio" : "🎵 Загрузить свой аудиофайл";
+        document.getElementById('btn-preview-audio').innerText = isEn ? "▶ Preview sound" : "▶ Прослушать звук";
+        document.getElementById('btn-reset-audio').innerText = isEn ? "🔄 Reset to stock sound" : "🔄 Сбросить на стоковый звук";
+
+        document.getElementById('hdr-reg-8').innerText = isEn ? "8. DATA MANAGEMENT & BACKUP" : "8. УПРАВЛЕНИЕ ДАННЫМИ И РЕЗЕРВНЫЕ КОПИИ";
         document.getElementById('btn-renumber').innerText = isEn ? "🔢 Renumber days sequentially (1, 2, 3...)" : "🔢 Перенумеровать дни по порядку (1, 2, 3...)";
         document.getElementById('btn-export-data').innerText = isEn ? "📥 Export to JSON" : "📥 Экспорт в JSON";
         document.getElementById('btn-import-data').innerText = isEn ? "📤 Import from JSON" : "📤 Импорт из JSON";
         document.getElementById('btn-clear-data').innerText = isEn ? "Reset all data" : "Сбросить все данные";
 
+        updateAudioUIStatus();
         resetTestState();
         updateDashboard();
     }
@@ -1577,10 +1801,6 @@
     let testTimeoutId2 = null;
     let f1IntervalId = null;
 
-    const colors = {
-        idle: '#2b87d1', waiting: '#ce2636', ready: '#4db052', fail: '#d94141', blue: '#1e52a8'
-    };
-
     function openTestWindow() {
         document.getElementById('testModalOverlay').classList.add('open');
         document.getElementById('testModalOverlay').style.display = 'flex';
@@ -1627,7 +1847,8 @@
     function setTestType(type) {
         currentTestType = type;
         document.querySelectorAll('[id^="btn-test-"]').forEach(btn => btn.classList.remove('test-active-btn'));
-        document.getElementById(`btn-test-${type}`).classList.add('test-active-btn');
+        const activeBtn = document.getElementById(`btn-test-${type}`);
+        if (activeBtn) activeBtn.classList.add('test-active-btn');
         
         const area = document.getElementById('test-area');
         if (type === 2) {
@@ -1641,8 +1862,8 @@
     }
 
     function updateTestSessionInfo() {
-        const attempts = testAttempts[currentTestType];
-        const averages = testAverages[currentTestType];
+        const attempts = testAttempts[currentTestType] || [];
+        const averages = testAverages[currentTestType] || [];
         const infoEl = document.getElementById('test-session-info');
         const isEn = currentLang === 'en';
         if (infoEl) {
@@ -1666,7 +1887,7 @@
         const submsg = document.getElementById('test-submessage');
         const f1Lights = document.getElementById('f1-lights');
         
-        area.style.backgroundColor = colors.idle;
+        area.style.backgroundColor = customTestColors.idle;
         f1Lights.style.display = currentTestType === 2 ? 'flex' : 'none';
         document.querySelectorAll('.f1-light').forEach(l => l.classList.remove('on'));
 
@@ -1679,6 +1900,9 @@
         } else if (currentTestType === 3) {
             msg.innerText = isEn ? "Click to start" : "Кликните чтобы начать";
             submsg.innerText = isEn ? "Click on green. DO NOT click on blue!" : "Если цвет зеленый - кликайте. Если синий - НЕ КЛИКАТЬ!";
+        } else if (currentTestType === 4) {
+            msg.innerText = isEn ? "Click to start" : "Кликните чтобы начать";
+            submsg.innerText = isEn ? "Audio Reaction: react to the sound (no visual color cue)" : "Аудио реакция: реагируйте на звук (без визуальной смены цвета)";
         }
         updateTestSessionInfo();
     }
@@ -1699,19 +1923,19 @@
             area.classList.remove('finished', 'failed');
             if (currentTestType === 1) {
                 testState = 'waiting';
-                area.style.backgroundColor = colors.waiting;
+                area.style.backgroundColor = customTestColors.waiting;
                 msg.innerText = isEn ? "Wait for green..." : "Ждите зеленый...";
                 submsg.innerText = "";
                 const randomTime = Math.random() * 3000 + 2000;
                 testTimeoutId1 = setTimeout(() => {
                     testState = 'ready';
-                    area.style.backgroundColor = colors.ready;
+                    area.style.backgroundColor = customTestColors.ready;
                     msg.innerText = isEn ? "CLICK NOW!" : "КЛИКАЙ!";
                     testStartMs = performance.now();
                 }, randomTime);
             } else if (currentTestType === 2) {
                 testState = 'waiting';
-                area.style.backgroundColor = colors.idle;
+                area.style.backgroundColor = customTestColors.idle;
                 msg.innerText = isEn ? "Lights turning on..." : "Загораются огни...";
                 submsg.innerText = "";
                 
@@ -1729,7 +1953,7 @@
                         testTimeoutId1 = setTimeout(() => {
                             lights.forEach(l => l.classList.remove('on'));
                             testState = 'ready';
-                            area.style.backgroundColor = colors.idle;
+                            area.style.backgroundColor = customTestColors.idle;
                             msg.innerText = isEn ? "GO!" : "ПУСК!";
                             testStartMs = performance.now();
                         }, randomTime);
@@ -1737,7 +1961,7 @@
                 }, 1000);
             } else if (currentTestType === 3) {
                 testState = 'waiting';
-                area.style.backgroundColor = colors.waiting;
+                area.style.backgroundColor = customTestColors.waiting;
                 msg.innerText = isEn ? "Wait..." : "Ожидание...";
                 submsg.innerText = "";
                 const randomTime = Math.random() * 3000 + 2000;
@@ -1745,23 +1969,39 @@
                 testTimeoutId1 = setTimeout(() => {
                     if (isBlue) {
                         testState = 'blue';
-                        area.style.backgroundColor = colors.blue;
+                        area.style.backgroundColor = customTestColors.blue;
                         msg.innerText = isEn ? "BLUE! DON'T CLICK!" : "СИНИЙ! НЕ КЛИКАЙ!";
                         testTimeoutId2 = setTimeout(() => {
                             if (testState === 'blue') {
                                 msg.innerText = isEn ? "Good! Avoided blue" : "Отлично! Не кликнули на синий";
                                 submsg.innerText = isEn ? "Click to continue" : "Кликните для продолжения";
-                                area.style.backgroundColor = colors.idle;
+                                area.style.backgroundColor = customTestColors.idle;
                                 area.classList.add('finished');
                                 testState = 'finished';
                             }
                         }, 1500);
                     } else {
                         testState = 'ready';
-                        area.style.backgroundColor = colors.ready;
+                        area.style.backgroundColor = customTestColors.ready;
                         msg.innerText = isEn ? "CLICK!" : "КЛИКАЙ!";
                         testStartMs = performance.now();
                     }
+                }, randomTime);
+            } else if (currentTestType === 4) {
+                testState = 'waiting';
+                area.style.backgroundColor = customTestColors.idle;
+                msg.innerText = isEn ? "Listen carefully..." : "Слушайте звук...";
+                submsg.innerText = isEn ? "Colors will NOT change" : "Цвет экрана не изменится";
+                
+                getAudioContext();
+                
+                const randomTime = Math.random() * 3000 + 2000;
+                testTimeoutId1 = setTimeout(() => {
+                    testState = 'ready';
+                    playAudioSignal();
+                    area.style.backgroundColor = customTestColors.idle;
+                    msg.innerText = isEn ? "CLICK NOW!" : "КЛИКАЙ!";
+                    testStartMs = performance.now();
                 }, randomTime);
             }
         } else if (testState === 'waiting') {
@@ -1769,25 +2009,25 @@
             clearInterval(f1IntervalId);
             testState = 'fail';
             area.classList.add('failed');
-            area.style.backgroundColor = colors.fail;
+            area.style.backgroundColor = customTestColors.fail;
             msg.innerText = isEn ? "Too soon!" : "Фальшстарт!";
             submsg.innerText = isEn ? "Click to try again" : "Кликните для повтора";
         } else if (testState === 'blue') {
             clearTimeout(testTimeoutId2);
             testState = 'fail';
             area.classList.add('failed');
-            area.style.backgroundColor = colors.fail;
+            area.style.backgroundColor = customTestColors.fail;
             msg.innerText = isEn ? "Mistake! It was blue!" : "Ошибка! Это был синий цвет!";
             submsg.innerText = isEn ? "Click to try again" : "Кликните для повтора";
         } else if (testState === 'ready') {
             const reactionTime = Math.round(performance.now() - testStartMs);
             testState = 'finished';
             area.classList.add('finished');
-            area.style.backgroundColor = colors.idle;
+            area.style.backgroundColor = customTestColors.idle;
 
             testAttempts[currentTestType].push(reactionTime);
 
-            if (autoFillMode === 'attempt' && currentTestType !== 3) {
+            if (autoFillMode === 'attempt' && currentTestType !== 3 && currentTestType !== 4) {
                 pushResultsToInput(currentTestType, [reactionTime]);
             }
             
@@ -1795,7 +2035,7 @@
                 const avg = Math.round(testAttempts[currentTestType].reduce((a, b) => a + b, 0) / 5);
                 testAverages[currentTestType].push(avg);
                 
-                if (currentTestType !== 3) {
+                if (currentTestType !== 3 && currentTestType !== 4) {
                     if (autoFillMode === 'each') {
                         pushResultsToInput(currentTestType, [avg]);
                     } else if (autoFillMode === 'full5') {
@@ -1814,6 +2054,8 @@
                     let autoFillNote = '';
                     if (currentTestType === 3) {
                         autoFillNote = isEn ? 'Training test (No-Go): results are not added to stats.' : 'Тренировочный тест (No-Go): результаты не вносятся в статистику.';
+                    } else if (currentTestType === 4) {
+                        autoFillNote = isEn ? 'Audio reaction test: results are not added to stats.' : 'Аудио тест: результаты не вносятся в статистику.';
                     } else if (autoFillMode === 'full5') {
                         autoFillNote = isEn ? 'Block of 5 averages added to the form!' : 'Все 5 усредненных результатов записаны в форму!';
                     } else if (autoFillMode === 'each') {
@@ -1848,7 +2090,7 @@
                     msg.innerText = `${reactionTime} ${ms}`;
                     
                     let eachNote = '';
-                    if (currentTestType === 3) {
+                    if (currentTestType === 3 || currentTestType === 4) {
                         eachNote = '';
                     } else if (autoFillMode === 'each') {
                         eachNote = isEn ? ' (added to form)' : ' (добавлено в форму)';
@@ -1874,7 +2116,7 @@
                     showToast(isEn ? `⚡ Average #${testAverages[currentTestType].length} (${avg} ${ms}) recorded!` : `⚡ Среднее #${testAverages[currentTestType].length} (${avg} ${ms}) зафиксировано!`);
                 }
             } else {
-                let attemptSuffix = (autoFillMode === 'attempt' && currentTestType !== 3) ? (isEn ? ' (added)' : ' (записано)') : '';
+                let attemptSuffix = (autoFillMode === 'attempt' && currentTestType !== 3 && currentTestType !== 4) ? (isEn ? ' (added)' : ' (записано)') : '';
                 msg.innerText = `${reactionTime} ${ms}`;
                 submsg.innerText = `${isEn ? 'Attempt' : 'Попытка'} ${testAttempts[currentTestType].length}/5${attemptSuffix}. ${isEn ? 'Click to continue' : 'Кликните для продолжения'}`;
             }
