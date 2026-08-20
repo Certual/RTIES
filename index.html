@@ -1,2132 +1,421 @@
 <!DOCTYPE html>
 <html lang="ru">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Эксперимент: Скорость реакции</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <style>
-        :root {
-            --bg-color: #0b0c10;
-            --panel-bg: #1f2833;
-            --accent-cyan: #66fcf1;
-            --accent-teal: #45a29e;
-            --text-main: #c5c6c7;
-            --border: #333333;
-        }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            transition: background-color 0.2s, color 0.2s, border-color 0.2s;
-        }
-
-        body {
-            background-color: var(--bg-color);
-            color: var(--text-main);
-            line-height: 1.6;
-            padding: 20px;
-            height: 100vh;
-            overflow: hidden;
-        }
-
-        .container {
-            max-width: 1600px;
-            height: 100%;
-            margin: 0 auto;
-            display: grid;
-            grid-template-columns: 1fr 2fr;
-            gap: 20px;
-        }
-
-        .col {
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-            height: 100%;
-            overflow: hidden;
-        }
-
-        ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-track { background: rgba(0,0,0,0.1); border-radius: 4px; }
-        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: var(--accent-teal); }
-
-        .panel {
-            background-color: var(--panel-bg);
-            border-radius: 10px;
-            padding: 20px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
-            border: 1px solid var(--border);
-            display: flex;
-            flex-direction: column;
-        }
-
-        .panel-auto { flex: 0 0 auto; }
-        .panel-flex { flex: 1 1 auto; overflow: hidden; }
-
-        h1, h2, h3 { color: var(--text-main); margin-bottom: 15px; font-weight: 600; flex-shrink: 0; }
-
-        .form-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 15px;
-            flex-shrink: 0;
-        }
-        .form-header h2 { margin-bottom: 0; }
-
-        .form-scroll-area {
-            overflow-y: auto;
-            flex: 1 1 auto;
-            padding-right: 5px;
-            margin-right: -5px;
-        }
-
-        .form-group { margin-bottom: 15px; flex-shrink: 0; }
-        .form-group label { display: block; margin-bottom: 5px; color: var(--text-main); font-size: 0.9em; }
-        .form-group input[type="text"], .form-group input[type="number"] {
-            width: 100%; padding: 10px; background: rgba(0, 0, 0, 0.2);
-            border: 1px solid var(--border); color: var(--text-main); border-radius: 5px;
-        }
-        .form-group input:focus { border-color: var(--accent-cyan); outline: none; }
-
-        .checkbox-group { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; color: var(--text-main); flex-shrink: 0; }
-
-        .weekend-box {
-            background: rgba(0, 0, 0, 0.25);
-            padding: 12px;
-            border-radius: 6px;
-            border: 1px solid var(--border);
-            transition: border-color 0.2s, background-color 0.2s;
-        }
-        .weekend-box label {
-            color: var(--text-main) !important;
-            font-weight: bold;
-            margin-bottom: 0;
-            cursor: pointer;
-        }
-        .weekend-box input[type="checkbox"] {
-            accent-color: var(--accent-cyan);
-            cursor: pointer;
-        }
-
-        .dashboard-select {
-            background-color: var(--bg-color);
-            color: var(--text-main);
-            border: 1px solid var(--accent-cyan);
-            padding: 6px 12px;
-            border-radius: 6px;
-            font-size: 0.85em;
-            font-weight: 600;
-            cursor: pointer;
-            outline: none;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-        }
-        .dashboard-select:hover {
-            border-color: var(--accent-teal);
-            background-color: var(--panel-bg);
-        }
-        .dashboard-select option {
-            background-color: var(--panel-bg);
-            color: var(--text-main);
-            padding: 8px;
-        }
-
-        .action-container {
-            position: relative;
-            flex-shrink: 0;
-            margin-top: 15px;
-        }
-
-        button {
-            width: 100%; padding: 12px; background: transparent; color: var(--text-main);
-            border: 2px solid var(--border); border-radius: 5px; cursor: pointer;
-            font-size: 1em; font-weight: bold; margin-bottom: 10px; flex-shrink: 0;
-        }
-        button:last-child { margin-bottom: 0; }
-        button:hover { background: var(--accent-cyan); border-color: var(--accent-cyan); color: var(--bg-color); }
-        .btn-alt:hover { background: var(--accent-teal); border-color: var(--accent-teal); color: var(--bg-color); }
-        
-        .btn-danger { color: #ff4c4c; border-color: #ff4c4c; }
-        .btn-danger:hover { background: #ff4c4c; border-color: #ff4c4c; color: var(--bg-color); }
-
-        .action-btn { padding: 5px 10px; font-size: 0.8em; margin: 0 2px; width: auto; }
-
-        .options-btn {
-            width: auto; padding: 6px 12px; margin-bottom: 0; font-size: 0.9em;
-            color: var(--text-main); border-color: var(--border);
-        }
-        .options-btn:hover { background: rgba(255,255,255,0.05); border-color: var(--text-main); color: var(--text-main); }
-
-        .dynamic-btn {
-            position: absolute;
-            bottom: 100%;
-            left: 0;
-            width: 100%;
-            max-height: 0;
-            opacity: 0;
-            margin-bottom: 0;
-            padding-top: 0;
-            padding-bottom: 0;
-            border-width: 0;
-            overflow: hidden;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            pointer-events: none;
-        }
-        .dynamic-btn.visible {
-            max-height: 60px;
-            opacity: 1;
-            margin-bottom: 10px;
-            padding-top: 12px;
-            padding-bottom: 12px;
-            border-width: 2px;
-            pointer-events: auto;
-        }
-
-        .theme-grid {
-            display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
-            background: rgba(0, 0, 0, 0.15); padding: 15px; border-radius: 5px;
-            border: 1px solid var(--border); margin-bottom: 15px; flex-shrink: 0;
-        }
-        .color-picker-group { display: flex; justify-content: space-between; align-items: center; font-size: 0.9em; }
-        .color-picker-group input[type="color"] { width: 40px; height: 30px; border: none; padding: 0; background: none; cursor: pointer; }
-
-        .stats-grid {
-            display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
-            gap: 15px; margin-bottom: 15px; flex-shrink: 0;
-        }
-        .stat-card { background: rgba(0,0,0,0.15); padding: 15px; border-radius: 8px; border: 1px solid var(--border); }
-        .stat-value { font-size: 1.2em; color: var(--text-main); font-weight: bold; margin: 5px 0; }
-        .stat-subtext { font-size: 0.85em; opacity: 0.8; }
-        
-        .copyable {
-            cursor: pointer;
-            border-bottom: 1px dashed currentColor;
-            transition: color 0.2s;
-        }
-        .copyable:hover {
-            color: var(--accent-cyan);
-        }
-
-        .growth { font-size: 0.85em; display: block; margin-top: 5px; }
-        .growth.positive { color: #4caf50; }
-        .growth.negative { color: #ff4c4c; }
-
-        .charts-row { display: flex; gap: 20px; flex-shrink: 0; }
-        .chart-col { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-        .chart-col h2 { font-size: 1.1em; margin-bottom: 10px; }
-        .chart-container { position: relative; height: 22vh; min-height: 180px; width: 100%; flex-shrink: 0; }
-
-        .table-container {
-            overflow-y: auto; flex: 1 1 auto;
-            margin: 0 -20px; padding: 0 20px;
-        }
-        .history-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 0.85em; }
-        .history-table th, .history-table td { padding: 10px; text-align: center; border-bottom: 1px solid var(--border); resize: both; overflow: auto; position: relative; }
-        
-        .history-table th {
-            position: sticky; top: 0; background-color: var(--panel-bg);
-            color: var(--text-main); z-index: 10; font-weight: 600;
-            box-shadow: 0 1px 0 var(--border); border-bottom: none;
-        }
-        .history-table td strong { color: var(--accent-cyan); }
-        
-        .rank-highlight { background-color: rgba(102, 252, 241, 0.1); font-weight: bold; }
-        
-        .current-rank-display { 
-            margin-bottom: 20px; font-size: 1.2em; color: var(--text-main); 
-            padding: 15px; background: rgba(0,0,0,0.3); border-radius: 8px; 
-            border: 1px solid var(--accent-cyan); text-align: center; font-weight: bold;
-        }
-        .current-rank-display span { color: var(--accent-cyan); text-transform: uppercase; margin-left: 10px; font-size: 1.1em; }
-
-        .modal-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.7); backdrop-filter: blur(3px);
-            z-index: 100; display: none; justify-content: center; align-items: center;
-            opacity: 0; transition: opacity 0.3s ease;
-        }
-        .modal-overlay.open { display: flex; opacity: 1; }
-        .modal-overlay.open .modal-content { transform: scale(1); }
-
-        .modal-content {
-            background-color: var(--panel-bg); border: 1px solid var(--border);
-            border-radius: 12px; padding: 25px; width: 90%; max-width: 800px;
-            max-height: 90vh; overflow-y: auto; position: relative;
-            transform: scale(0.9); transition: transform 0.3s ease;
-            display: flex; flex-direction: column;
-        }
-        .modal-header {
-            display: flex; justify-content: space-between; align-items: center;
-            margin-bottom: 20px; border-bottom: 1px solid var(--border); padding-bottom: 10px; flex-shrink: 0;
-        }
-        .modal-header h1 { margin-bottom: 0; }
-        .close-modal {
-            background: none; border: none; font-size: 24px; color: var(--text-main);
-            cursor: pointer; padding: 0 5px; width: auto; margin-bottom: 0;
-        }
-        .close-modal:hover { color: var(--accent-cyan); background: none; border: none; }
-        
-        .modal-body { color: var(--text-main); font-size: 0.95em; overflow-y: auto; flex: 1; padding-right: 5px; }
-        .modal-section { margin-bottom: 20px; background: rgba(0,0,0,0.1); padding: 15px; border-radius: 8px; border: 1px solid var(--border); position: relative; }
-        .modal-section h2 { color: var(--text-main); font-size: 1.1em; border-bottom: none; margin-bottom: 12px; outline: none; }
-        .modal-section ul { list-style-type: none; margin-left: 10px; }
-        .modal-section li { position: relative; padding-left: 15px; margin-bottom: 5px; }
-        .modal-section li::before { content: '•'; color: var(--accent-teal); position: absolute; left: 0; font-weight: bold; }
-        .modal-section li strong { color: var(--accent-cyan); }
-        .status-optional { color: #f1c40f; font-weight: bold; }
-
-        .toast {
-            position: fixed; top: 20px; right: 20px;
-            background: var(--panel-bg); color: var(--accent-cyan);
-            border: 1px solid var(--accent-cyan); padding: 15px 25px;
-            border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-            font-weight: bold; z-index: 9999; opacity: 0;
-            transform: translateX(50px); transition: opacity 0.3s, transform 0.3s;
-            pointer-events: none;
-        }
-        .toast.show { opacity: 1; transform: translateX(0); }
-
-        #test-modal-content {
-            width: 100vw; height: 100vh; max-width: none; border-radius: 0; border: none;
-            display: flex; flex-direction: column; padding: 0; background: var(--bg-color);
-        }
-        .test-header {
-            display: flex; justify-content: space-between; align-items: center; padding: 15px 25px;
-            background: var(--panel-bg); z-index: 100; border-bottom: 1px solid var(--border); flex-shrink: 0;
-        }
-        .test-area {
-            flex: 1; display: flex; justify-content: center; align-items: center; flex-direction: column;
-            cursor: pointer; font-size: 3em; font-weight: bold; 
-            transition: none !important; 
-            position: relative; user-select: none; color: #fff; text-align: center;
-            background-color: #2b87d1;
-        }
-        .f1-lights-container { display: none; gap: 2vw; margin-bottom: 20px; }
-        
-        .test-area.f1-mode {
-            justify-content: flex-start;
-        }
-        .test-area.f1-mode .f1-lights-container {
-            display: flex;
-            position: absolute;
-            top: 35%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            margin-bottom: 0;
-        }
-        .test-area.f1-mode .test-text-wrap {
-            position: absolute;
-            top: 55%;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 100%;
-        }
-
-        .test-text-wrap {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            pointer-events: none;
-        }
-
-        .f1-light { width: 8vw; height: 8vw; max-width: 120px; max-height: 120px; border-radius: 50%; background: #333; border: 4px solid #111; transition: none !important; }
-        .f1-light.on { background: #ff4c4c; box-shadow: 0 0 30px #ff4c4c; }
-        .hide-text:not(.finished):not(.failed) .test-text, .hide-text:not(.finished):not(.failed) .test-subtext { opacity: 0 !important; }
-        .test-subtext { font-size: 0.35em; margin-top: 10px; font-weight: normal; }
-        .test-active-btn { background: var(--accent-cyan) !important; color: var(--bg-color) !important; font-weight: bold; }
-
-        .test-session-info {
-            position: absolute;
-            bottom: 20px;
-            background: rgba(0,0,0,0.5);
-            padding: 10px 20px;
-            border-radius: 8px;
-            font-size: 0.4em;
-            border: 1px solid var(--border);
-        }
-        .hide-session-info #test-session-info {
-            display: none !important;
-        }
-
-        .test-top-trigger {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 30px;
-            z-index: 105;
-            display: none;
-        }
-        .hide-header .test-top-trigger {
-            display: block;
-        }
-        .hide-header .test-header {
-            opacity: 0;
-            pointer-events: none;
-            transform: translateY(-100%);
-            transition: opacity 0.3s, transform 0.3s;
-            position: absolute;
-            width: 100%;
-            top: 0;
-            left: 0;
-            z-index: 100;
-        }
-        .hide-header .test-top-trigger:hover ~ .test-header,
-        .hide-header .test-header:hover {
-            opacity: 1;
-            pointer-events: auto;
-            transform: translateY(0);
-        }
-
-        @media (max-width: 1200px) {
-            body { height: auto; overflow: visible; }
-            .container { grid-template-columns: 1fr; height: auto; }
-            .col { height: auto; overflow: visible; }
-            .charts-row { flex-direction: column; }
-            .panel-flex { height: 600px; }
-            .chart-container { height: 250px; }
-        }
-    </style>
-</head>
-<body>
-
-<div id="toast" class="toast">Текст скопирован!</div>
-
-<div class="container">
-    <div class="col col-left">
-        <div class="panel panel-flex">
-            <div class="form-header">
-                <h2 id="formTitle" style="display:flex; align-items:center; flex-wrap:wrap; gap:8px;">
-                    <span id="formTitleText">Ввод данных за День</span>
-                    <input type="number" id="input-day-number" min="1" value="1" style="width:75px; padding:4px 8px; font-weight:bold; font-size:0.9em; text-align:center; background:rgba(0,0,0,0.3); border:1px solid var(--accent-cyan); color:var(--accent-cyan); border-radius:5px;">
-                </h2>
-                <div>
-                    <button class="options-btn" id="btn-open-tests" onclick="openTestWindow()">⏱ Тесты</button>
-                    <button class="options-btn" id="btn-open-options" onclick="openRegulations()">⚙ Опции</button>
-                </div>
-            </div>
-            
-            <div class="form-scroll-area">
-                <div class="form-group">
-                    <label id="lbl-f1-results">Formula 1 (5 усредненных):</label>
-                    <input type="text" id="f1-results" class="form-input-watch" placeholder="Напр: 210 215 205...">
-                </div>
-                <div class="form-group">
-                    <label id="lbl-f1-false">Formula 1 - Фальшстарты:</label>
-                    <input type="number" id="f1-false" class="form-input-watch" value="0" min="0">
-                </div>
-                
-                <hr style="border-color: var(--border); margin:15px 0;">
-
-                <div class="form-group">
-                    <label id="lbl-hb-results">Human Benchmark (5 усредненных):</label>
-                    <input type="text" id="hb-results" class="form-input-watch" placeholder="Напр: 195 200 190...">
-                </div>
-                <div class="form-group">
-                    <label id="lbl-hb-false">Human Benchmark - Фальшстарты:</label>
-                    <input type="number" id="hb-false" class="form-input-watch" value="0" min="0">
-                </div>
-
-                <hr style="border-color: var(--border); margin:15px 0;">
-
-                <div id="dynamic-tasks-list"></div>
-                <div style="display:flex; gap:10px; margin-bottom:15px;">
-                    <input type="text" id="new-task-input" placeholder="Новый пункт..." style="flex:1; padding:8px; background:rgba(0,0,0,0.2); border:1px solid var(--border); color:var(--text-main); border-radius:5px; font-size:0.9em;">
-                    <button id="btn-add-task" onclick="addTask()" style="width:auto; padding:8px 15px; margin:0;">Добавить</button>
-                </div>
-
-                <hr style="border-color: var(--border); margin:15px 0;">
-
-                <div class="checkbox-group weekend-box">
-                    <input type="checkbox" id="is-weekend">
-                    <label for="is-weekend" id="lbl-is-weekend">Выходной день (не учитывать в статистике)</label>
-                </div>
-            </div>
-
-            <div class="action-container">
-                <button id="clearInputBtn" class="btn-alt dynamic-btn" onclick="clearCurrentInput()">Очистить ввод</button>
-                <button id="saveBtn" onclick="saveDay()">Сохранить результаты</button>
-                <button id="cancelEditBtn" class="btn-alt" style="display:none;" onclick="cancelEdit()">Отменить редактирование</button>
-            </div>
-        </div>
-    </div>
-
-    <div class="col col-right">
-        <div class="panel panel-auto">
-            <div class="form-header">
-                <h2 id="hdr-stats-title">Статистика</h2>
-                <div style="display: flex; gap: 10px;">
-                    <select id="target-day-select" class="dashboard-select" onchange="updateDashboard()"></select>
-                    <select id="compare-day-select" class="dashboard-select" onchange="updateDashboard()"></select>
-                </div>
-            </div>
-            <div class="stats-grid" id="latest-stats"></div>
-            
-            <div class="charts-row">
-                <div class="chart-col">
-                    <h2 id="hdr-chart-reaction">Динамика показателей (Активные дни)</h2>
-                    <div class="chart-container"><canvas id="reactionChart"></canvas></div>
-                </div>
-                <div class="chart-col">
-                    <h2 id="hdr-chart-fs">Фальшстарты (Активные дни)</h2>
-                    <div class="chart-container"><canvas id="falseStartsChart"></canvas></div>
-                </div>
-            </div>
-        </div>
-
-        <div class="panel panel-flex">
-            <h2 id="hdr-history-title">История результатов</h2>
-            <div class="table-container">
-                <table class="history-table">
-                    <thead>
-                        <tr>
-                            <th id="th-day">День</th>
-                            <th id="th-type">Тип</th>
-                            <th id="th-total">Общее (Ср / Мин / Макс)</th>
-                            <th id="th-f1">F1 (Ср / Мин / Макс)</th>
-                            <th id="th-hb">HB (Ср / Мин / Макс)</th>
-                            <th id="th-fs">ФС (F1/HB)</th>
-                            <th id="th-tasks">Задачи</th>
-                            <th id="th-actions">Действия</th>
-                        </tr>
-                    </thead>
-                    <tbody id="history-body"></tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-</div>
-
-<div class="modal-overlay" id="testModalOverlay">
-    <div class="modal-content" id="test-modal-content">
-        <div class="test-top-trigger" id="testTopTrigger"></div>
-        <div class="test-header">
-            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                <button class="options-btn test-active-btn" id="btn-test-1" onclick="setTestType(1)">Human Benchmark</button>
-                <button class="options-btn" id="btn-test-2" onclick="setTestType(2)">Валттери Ботта (F1)</button>
-                <button class="options-btn" id="btn-test-3" onclick="setTestType(3)">Синий цвет (No-Go)</button>
-                <button class="options-btn" id="btn-test-4" onclick="setTestType(4)">Аудио реакция (Звук)</button>
-            </div>
-            <div style="display:flex; gap:15px; align-items:center; flex-wrap: wrap;">
-                <div style="display:flex; align-items:center; gap:6px;">
-                    <label for="test-autofill-mode" style="font-size:0.85em; cursor:pointer;" id="lbl-autofill-mode">Автозапись в ввод:</label>
-                    <select id="test-autofill-mode" class="dashboard-select" style="padding:4px 8px; font-size:0.8em;" onchange="changeAutoFillMode(this.value)">
-                        <option value="attempt" id="opt-af-attempt">Каждая попытка</option>
-                        <option value="each" id="opt-af-each">Каждый усредненный (1)</option>
-                        <option value="full5" id="opt-af-full5">Только массив (5 шт)</option>
-                        <option value="off" id="opt-af-off">Выключено</option>
-                    </select>
-                </div>
-                <label style="display:flex; align-items:center; gap:5px; cursor:pointer;">
-                    <input type="checkbox" id="hide-test-text" onchange="toggleTestText()"> <span id="lbl-hide-text">Скрыть текст</span>
-                </label>
-                <label style="display:flex; align-items:center; gap:5px; cursor:pointer;">
-                    <input type="checkbox" id="hide-test-session-info" onchange="toggleTestSessionInfo()"> <span id="lbl-hide-session">Скрыть попытки в серии</span>
-                </label>
-                <label style="display:flex; align-items:center; gap:5px; cursor:pointer;">
-                    <input type="checkbox" id="hide-test-header" onchange="toggleTestHeader()"> <span id="lbl-hide-panel">Скрыть панель</span>
-                </label>
-                <button class="options-btn" id="btn-test-fullscreen" onclick="toggleTestFullscreen()">⛶ Полный экран</button>
-                <button class="btn-danger options-btn" id="btn-test-close" onclick="closeTestWindow()">✖ Закрыть</button>
-            </div>
-        </div>
-        <div class="test-area" id="test-area" onmousedown="handleTestClick()">
-            <div class="f1-lights-container" id="f1-lights">
-                <div class="f1-light"></div>
-                <div class="f1-light"></div>
-                <div class="f1-light"></div>
-                <div class="f1-light"></div>
-                <div class="f1-light"></div>
-            </div>
-            <div class="test-text-wrap" id="test-text-wrap">
-                <span class="test-text" id="test-message">Нажмите чтобы начать</span>
-                <span class="test-subtext" id="test-submessage"></span>
-            </div>
-            <div class="test-session-info" id="test-session-info">Попытка: 0/5 в текущей серии [] | Накоплено усредненных (0/5): []</div>
-        </div>
-    </div>
-</div>
-
-<div class="modal-overlay" id="modalOverlay" onclick="closeRegulationsOnOverlay(event)">
-    <div class="modal-content" id="regulationsModalContent">
-        <div class="modal-header">
-            <h1 id="hdr-options-modal">ОПЦИИ И РЕГЛАМЕНТ</h1>
-            <div style="display:flex; gap:10px; align-items:center;">
-                <button class="options-btn" onclick="toggleLanguage()">🌐 EN / RU</button>
-                <button class="close-modal" onclick="closeRegulations()">×</button>
-            </div>
-        </div>
-        <div class="modal-body col-left">
-            
-            <div id="currentRankDisplay" class="current-rank-display">
-                Общий ранг (за сегодня): <span>Нет данных</span>
-            </div>
-
-            <div id="regulations-sections-container">
-                <div class="modal-section" id="reg-section-1">
-                    <h2 id="hdr-reg-1">1. ОБЩИЕ НОРМЫ И ТРЕБОВАНИЯ</h2>
-                    <div class="reg-content-area">
-                        <table class="history-table">
-                            <thead>
-                                <tr>
-                                    <th id="th-reg-param">Параметр</th>
-                                    <th id="th-reg-norm">Норматив</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr><td id="td-reg-min"><strong>Дневной минимум</strong></td><td id="td-reg-min-val">50 зарегистрированных тестов реакции</td></tr>
-                                <tr><td id="td-reg-reg"><strong>Регулярность</strong></td><td id="td-reg-reg-val">Пропускать дни запрещено, но обязательно каждую неделю один день отдыха</td></tr>
-                                <tr><td id="td-reg-surplus"><strong>Сверхнорма</strong></td><td id="td-reg-surplus-val">Не учитывается в общей статистике</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <div class="modal-section" id="reg-section-2">
-                    <h2 id="hdr-reg-2">2. ПОРЯДОК ПРОВЕДЕНИЯ ТЕСТОВ</h2>
-                    <div class="reg-content-area">
-                        <table class="history-table">
-                            <thead>
-                                <tr>
-                                    <th id="th-reg-test">Тест</th>
-                                    <th id="th-reg-spec">Спецификация</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr><td><strong>Formula 1</strong></td><td id="td-reg-f1-spec">5 попыток (усредненный блок)</td></tr>
-                                <tr><td><strong>Human Benchmark</strong></td><td id="td-reg-hb-spec">5 попыток (усредненный блок)</td></tr>
-                                <tr><td id="td-reg-calc"><strong>Расчет</strong></td><td id="td-reg-calc-val">Среднее, минимум и максимум на основе двух дисциплин</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <div class="modal-section" id="reg-section-3">
-                    <h2 id="hdr-reg-3">3. ДНЕВНАЯ НОРМА OSU! И KOVAAK'S</h2>
-                    <div class="reg-content-area">
-                        <table class="history-table">
-                            <thead>
-                                <tr>
-                                    <th id="th-reg-disc">Дисциплина</th>
-                                    <th id="th-reg-req">Требования</th>
-                                    <th id="th-reg-stat">Статус</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr><td><strong>Osu! HRDTHD</strong></td><td id="td-reg-osu-req">Сессия от 30 мин (AR &gt; 11, не ниже 11)</td><td><span class="status-optional" id="status-osu-opt">Опционально</span></td></tr>
-                                <tr><td><strong>Kovaak's</strong></td><td id="td-reg-kov-req">Плейлист Reactive Tracking от 30 мин</td><td id="td-reg-kov-req-val">Обязательно</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <div class="modal-section" id="reg-section-4">
-                    <h2 id="hdr-reg-4">4. СРОКИ И ОТРАБОТКИ</h2>
-                    <div class="reg-content-area">
-                        <table class="history-table">
-                            <thead>
-                                <tr>
-                                    <th id="th-reg-cat">Категория</th>
-                                    <th id="th-reg-cond">Условия</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr><td id="td-reg-dur"><strong>Длительность</strong></td><td id="td-reg-dur-val">3 месяца (08.09.2026 — 11.09.2026) с возможностью продления</td></tr>
-                                <tr><td id="td-reg-retake"><strong>Отработка</strong></td><td id="td-reg-retake-val">Пропущенные дни и неполные сессии подлежат отработке</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <div class="modal-section" id="reg-section-5">
-                    <h2 id="hdr-reg-5">5. РАНГИ И СРАВНЕНИЕ РЕАКЦИИ</h2>
-                    <div class="reg-content-area">
-                        <table class="history-table" id="rankTable">
-                            <thead>
-                                <tr>
-                                    <th id="th-rank-time">Время (мс)</th>
-                                    <th id="th-rank-rank">Ранг</th>
-                                    <th id="th-rank-ref">Сравнение / Ориентир</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr id="rank-1"><td>&lt; 150</td><td id="r1-name"><strong>Мировой уровень</strong></td><td id="r1-desc">Про-киберспортсмены (osu! DT / FPS), пилоты F1</td></tr>
-                                <tr id="rank-2"><td>150 - 180</td><td id="r2-name"><strong>Элита</strong></td><td id="r2-desc">Топ-геймеры, пилоты истребителей</td></tr>
-                                <tr id="rank-3"><td>180 - 210</td><td id="r3-name"><strong>Продвинутый</strong></td><td id="r3-desc">Опытные геймеры, спортсмены</td></tr>
-                                <tr id="rank-4"><td>210 - 250</td><td id="r4-name"><strong>Норма</strong></td><td id="r4-desc">Средний взрослый человек</td></tr>
-                                <tr id="rank-5"><td>250 - 300</td><td id="r5-name"><strong>Ниже среднего</strong></td><td id="r5-desc">Любители, состояние усталости</td></tr>
-                                <tr id="rank-6"><td>&gt; 300</td><td id="r6-name"><strong>Замедленная</strong></td><td id="r6-desc">Сильное утомление / отсутствие концентрации</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
-            <hr style="border-color: var(--border); margin: 25px 0;">
-
-            <div class="modal-section">
-                <h2 id="hdr-reg-6">6. НАСТРОЙКИ ИНТЕРФЕЙСА И ЦВЕТОВ</h2>
-                
-                <h3 id="hdr-theme-main" style="font-size: 0.95em; color: var(--accent-cyan); margin-bottom: 8px;">6.1 Основные цвета интерфейса:</h3>
-                <div class="theme-grid">
-                    <div class="color-picker-group"><label id="lbl-theme-bg">Фон сайта:</label><input type="color" id="color-bg" value="#0b0c10" onchange="updateTheme()"></div>
-                    <div class="color-picker-group"><label id="lbl-theme-panel">Фон панелей:</label><input type="color" id="color-panel" value="#1f2833" onchange="updateTheme()"></div>
-                    <div class="color-picker-group"><label id="lbl-theme-acc1">Акцент 1 (Графики/F1):</label><input type="color" id="color-accent1" value="#66fcf1" onchange="updateTheme()"></div>
-                    <div class="color-picker-group"><label id="lbl-theme-acc2">Акцент 2 (Маркеры/HB):</label><input type="color" id="color-accent2" value="#45a29e" onchange="updateTheme()"></div>
-                    <div class="color-picker-group"><label id="lbl-theme-text">Текст и Заголовки:</label><input type="color" id="color-text" value="#c5c6c7" onchange="updateTheme()"></div>
-                    <div class="color-picker-group"><label id="lbl-theme-border">Границы:</label><input type="color" id="color-border" value="#333333" onchange="updateTheme()"></div>
-                </div>
-                <button class="btn-alt" id="btn-reset-theme" onclick="resetTheme()" style="margin-bottom: 20px;">Сбросить цвета темы по умолчанию</button>
-
-                <h3 id="hdr-theme-tests" style="font-size: 0.95em; color: var(--accent-cyan); margin-bottom: 8px;">6.2 Цвета экранов тестирования:</h3>
-                <div class="theme-grid">
-                    <div class="color-picker-group"><label id="lbl-test-idle">Экран старта (Idle):</label><input type="color" id="color-test-idle" value="#2b87d1" onchange="updateTestColors()"></div>
-                    <div class="color-picker-group"><label id="lbl-test-waiting">Ожидание сигнала (Wait):</label><input type="color" id="color-test-waiting" value="#ce2636" onchange="updateTestColors()"></div>
-                    <div class="color-picker-group"><label id="lbl-test-ready">Сигнал к нажатию (Ready):</label><input type="color" id="color-test-ready" value="#4db052" onchange="updateTestColors()"></div>
-                    <div class="color-picker-group"><label id="lbl-test-fail">Фальшстарт / Ошибка (Fail):</label><input type="color" id="color-test-fail" value="#d94141" onchange="updateTestColors()"></div>
-                    <div class="color-picker-group" style="grid-column: 1 / -1;"><label id="lbl-test-blue">Ложная цель No-Go (Синий):</label><input type="color" id="color-test-blue" value="#1e52a8" onchange="updateTestColors()"></div>
-                </div>
-                <button class="btn-alt" id="btn-reset-test-colors" onclick="resetTestColors()">Сбросить цвета тестов по умолчанию</button>
-            </div>
-
-            <div class="modal-section">
-                <h2 id="hdr-reg-audio">7. НАСТРОЙКИ АУДИО ТЕСТА</h2>
-                <div style="background: rgba(0,0,0,0.25); padding: 12px; border-radius: 6px; border: 1px solid var(--border); margin-bottom: 15px;">
-                    <div id="audio-custom-status" style="font-weight: bold; font-size: 0.9em; margin-bottom: 8px;"></div>
-                    <div style="font-size: 0.8em; opacity: 0.8;" id="audio-custom-desc">Вы можете загрузить собственный короткий звук (MP3, WAV, OGG) для тренировки слуховой реакции с нулевой задержкой.</div>
-                </div>
-                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                    <button class="options-btn btn-alt" id="btn-upload-audio" onclick="document.getElementById('custom-audio-input').click()" style="flex:1;">🎵 Загрузить свой аудиофайл</button>
-                    <button class="options-btn" id="btn-preview-audio" onclick="playAudioSignal()" style="flex:1;">▶ Прослушать звук</button>
-                    <button class="options-btn btn-danger" id="btn-reset-audio" onclick="resetStockAudio()" style="flex:1;">🔄 Сбросить на стоковый звук</button>
-                </div>
-                <input type="file" id="custom-audio-input" accept="audio/*" style="display:none;" onchange="handleAudioUpload(event)">
-            </div>
-
-            <div class="modal-section">
-                <h2 id="hdr-reg-8">8. УПРАВЛЕНИЕ ДАННЫМИ И РЕЗЕРВНЫЕ КОПИИ</h2>
-                <div style="display: flex; flex-direction: column; gap: 10px;">
-                    <button class="options-btn" id="btn-renumber" onclick="renumberDaysSequentially()">🔢 Перенумеровать дни по порядку (1, 2, 3...)</button>
-                    <div style="display: flex; gap: 10px;">
-                        <button class="options-btn" id="btn-export-data" onclick="exportDataJSON()" style="flex:1;">📥 Экспорт в JSON</button>
-                        <button class="options-btn" id="btn-import-data" onclick="importDataJSON()" style="flex:1;">📤 Импорт из JSON</button>
-                    </div>
-                    <input type="file" id="import-file-input" accept=".json" style="display:none;" onchange="handleFileImport(event)">
-                    <button class="btn-danger" id="btn-clear-data" onclick="clearData()">Сбросить все данные</button>
-                </div>
-            </div>
-
-        </div>
-    </div>
-</div>
-
-<script>
-    let currentLang = localStorage.getItem('reactionLang') || 'ru';
-    let autoFillMode = localStorage.getItem('reactionAutoFillMode') || 'each';
-
-    const defaultTheme = {
-        bg: '#0b0c10', panel: '#1f2833', acc1: '#66fcf1', acc2: '#45a29e', text: '#c5c6c7', border: '#333333'
-    };
-    
-    const defaultTestColors = {
-        idle: '#2b87d1', waiting: '#ce2636', ready: '#4db052', fail: '#d94141', blue: '#1e52a8'
-    };
-
-    const defaultTasks = ["Osu HRDTHD (30 мин) (Опционально)", "Kovaak's (30 мин)"];
-
-    let experimentData = JSON.parse(localStorage.getItem('reactionExperimentData')) || [];
-    let customTheme = JSON.parse(localStorage.getItem('reactionCustomTheme')) || defaultTheme;
-    let customTestColors = JSON.parse(localStorage.getItem('reactionTestColors')) || { ...defaultTestColors };
-    let tasksConfig = JSON.parse(localStorage.getItem('reactionTasksConfig')) || defaultTasks;
-    
-    let reactionChartInstance = null;
-    let falseStartsChartInstance = null;
-    let editIndex = -1;
-
-    let testAttempts = { 1: [], 2: [], 3: [], 4: [] };
-    let testAverages = { 1: [], 2: [], 3: [], 4: [] };
-    
-    let audioCtx = null;
-    let customAudioBuffer = null;
-    let customAudioName = localStorage.getItem('reactionCustomAudioName') || '';
-
-    function getAudioContext() {
-        if (!audioCtx) {
-            const AudioContext = window.AudioContext || window.webkitAudioContext;
-            if (AudioContext) {
-                audioCtx = new AudioContext();
-            }
-        }
-        if (audioCtx && audioCtx.state === 'suspended') {
-            audioCtx.resume();
-        }
-        return audioCtx;
-    }
-
-    function initCustomAudio() {
-        const base64 = localStorage.getItem('reactionCustomAudioBase64');
-        if (base64) {
-            try {
-                const binaryString = atob(base64.split(',')[1] || base64);
-                const len = binaryString.length;
-                const bytes = new Uint8Array(len);
-                for (let i = 0; i < len; i++) {
-                    bytes[i] = binaryString.charCodeAt(i);
-                }
-                const ctx = getAudioContext();
-                if (ctx) {
-                    ctx.decodeAudioData(bytes.buffer.slice(0), (decoded) => {
-                        customAudioBuffer = decoded;
-                        updateAudioUIStatus();
-                    }, (e) => {
-                        console.error("Decode error", e);
-                        customAudioBuffer = null;
-                        updateAudioUIStatus();
-                    });
-                }
-            } catch (err) {
-                console.error("Base64 decode error", err);
-                customAudioBuffer = null;
-                updateAudioUIStatus();
-            }
-        } else {
-            updateAudioUIStatus();
-        }
-    }
-
-    function playAudioSignal() {
-        try {
-            const ctx = getAudioContext();
-            if (!ctx) return;
-
-            if (customAudioBuffer) {
-                const source = ctx.createBufferSource();
-                source.buffer = customAudioBuffer;
-                source.connect(ctx.destination);
-                source.start(0);
-                return;
-            }
-
-            const now = ctx.currentTime;
-            const osc = ctx.createOscillator();
-            const gain = ctx.createGain();
-            
-            osc.type = 'sine';
-            osc.frequency.setValueAtTime(950, now);
-            osc.frequency.exponentialRampToValueAtTime(800, now + 0.008);
-            
-            gain.gain.setValueAtTime(0.0001, now);
-            gain.gain.linearRampToValueAtTime(0.28, now + 0.001);
-            gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.075);
-            
-            osc.connect(gain);
-            gain.connect(ctx.destination);
-            
-            osc.start(now);
-            osc.stop(now + 0.08);
-        } catch (e) {
-            console.error("Audio error:", e);
-        }
-    }
-
-    function handleAudioUpload(event) {
-        const file = event.target.files[0];
-        if (!file) return;
-        const isEn = currentLang === 'en';
-
-        if (file.size > 5 * 1024 * 1024) {
-            alert(isEn ? "File is too large (max 5MB)." : "Файл слишком большой (максимум 5 МБ).");
-            return;
-        }
-
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            const base64 = e.target.result;
-            const ctx = getAudioContext();
-            
-            const arrayBufferReader = new FileReader();
-            arrayBufferReader.onload = function(abEvent) {
-                const arrayBuffer = abEvent.target.result;
-                ctx.decodeAudioData(arrayBuffer, (decoded) => {
-                    customAudioBuffer = decoded;
-                    customAudioName = file.name;
-                    localStorage.setItem('reactionCustomAudioBase64', base64);
-                    localStorage.setItem('reactionCustomAudioName', file.name);
-                    updateAudioUIStatus();
-                    showToast(isEn ? `Custom audio "${file.name}" loaded!` : `Аудио "${file.name}" загружено!`);
-                    playAudioSignal();
-                }, (decodeErr) => {
-                    alert(isEn ? "Failed to decode audio file." : "Не удалось декодировать аудиофайл.");
-                });
-            };
-            arrayBufferReader.readAsArrayBuffer(file);
-        };
-        reader.readAsDataURL(file);
-        event.target.value = '';
-    }
-
-    function resetStockAudio() {
-        const isEn = currentLang === 'en';
-        customAudioBuffer = null;
-        customAudioName = '';
-        localStorage.removeItem('reactionCustomAudioBase64');
-        localStorage.removeItem('reactionCustomAudioName');
-        updateAudioUIStatus();
-        showToast(isEn ? "Reset to stock synthesized audio!" : "Возвращен стоковый синтезированный звук!");
-        playAudioSignal();
-    }
-
-    function updateAudioUIStatus() {
-        const statusEl = document.getElementById('audio-custom-status');
-        if (!statusEl) return;
-        const isEn = currentLang === 'en';
-        if (customAudioName && customAudioBuffer) {
-            statusEl.innerHTML = `<span style="color:var(--accent-cyan);">🎵 ${isEn ? 'Current audio:' : 'Текущий звук:'}</span> ${customAudioName}`;
-        } else {
-            statusEl.innerHTML = `<span style="color:var(--accent-teal);">⚡ ${isEn ? 'Current audio: Stock synthesized tone (950Hz)' : 'Текущий звук: Стоковый синтезированный тон (950 Гц)'}</span>`;
-        }
-    }
-
-    function init() {
-        loadThemeInputs();
-        applyThemeCSS();
-        renderTasksList();
-        bindInputListeners();
-        resetForm();
-        updateDashboard();
-        updateTestSessionInfo();
-        initCustomAudio();
-        applyLanguage();
-
-        const autoFillSelect = document.getElementById('test-autofill-mode');
-        if (autoFillSelect) {
-            autoFillSelect.value = autoFillMode;
-        }
-    }
-
-    function changeAutoFillMode(mode) {
-        autoFillMode = mode;
-        localStorage.setItem('reactionAutoFillMode', mode);
-        const isEn = currentLang === 'en';
-        let modeName = '';
-        if (mode === 'attempt') modeName = isEn ? 'Every attempt' : 'Каждая попытка';
-        else if (mode === 'each') modeName = isEn ? 'Each average (1)' : 'Каждый усредненный (1)';
-        else if (mode === 'full5') modeName = isEn ? 'Block of 5 averages' : 'Только массив (5 шт)';
-        else modeName = isEn ? 'Disabled' : 'Выключено';
-        showToast(isEn ? `Auto-add mode: ${modeName}` : `Режим автозаписи: ${modeName}`);
-    }
-
-    function pushResultsToInput(type, values) {
-        if (type === 3 || type === 4) return;
-        if (!values || values.length === 0) return;
-        const inputId = (type === 2) ? 'f1-results' : 'hb-results';
-        const input = document.getElementById(inputId);
-        if (!input) return;
-        const currentVals = input.value.trim() ? input.value.trim().split(/\s+/) : [];
-        values.forEach(v => currentVals.push(v));
-        input.value = currentVals.join(' ');
-        checkFormInputs();
-    }
-
-    function renderTasksList() {
-        const container = document.getElementById('dynamic-tasks-list');
-        container.innerHTML = '';
-        tasksConfig.forEach((task, idx) => {
-            container.innerHTML += `
-                <div class="checkbox-group" style="justify-content: space-between; margin-bottom: 5px;">
-                    <div style="display:flex; align-items:center; gap:10px;">
-                        <input type="checkbox" id="task-${idx}" class="dynamic-task-checkbox" data-taskname="${task}">
-                        <label for="task-${idx}">${task}</label>
-                    </div>
-                    <button class="action-btn btn-danger" onclick="removeTask(${idx})" style="padding:2px 8px; font-size:12px;">✖</button>
-                </div>
-            `;
-        });
-    }
-
-    function addTask() {
-        const input = document.getElementById('new-task-input');
-        const val = input.value.trim();
-        if (val && !tasksConfig.includes(val)) {
-            tasksConfig.push(val);
-            localStorage.setItem('reactionTasksConfig', JSON.stringify(tasksConfig));
-            input.value = '';
-            renderTasksList();
-        }
-    }
-
-    function removeTask(idx) {
-        const msg = currentLang === 'en' ? `Delete item "${tasksConfig[idx]}"?` : `Удалить пункт "${tasksConfig[idx]}"?`;
-        if (confirm(msg)) {
-            tasksConfig.splice(idx, 1);
-            localStorage.setItem('reactionTasksConfig', JSON.stringify(tasksConfig));
-            renderTasksList();
-        }
-    }
-
-    function bindInputListeners() {
-        document.querySelectorAll('.form-input-watch').forEach(input => {
-            input.addEventListener('input', checkFormInputs);
-        });
-    }
-
-    function showToast(message) {
-        const toast = document.getElementById('toast');
-        toast.innerText = message;
-        toast.classList.add('show');
-        setTimeout(() => toast.classList.remove('show'), 2500);
-    }
-
-    function copyVal(val, el) {
-        navigator.clipboard.writeText(val).then(() => {
-            const originalColor = el.style.color;
-            el.style.color = 'var(--accent-cyan)';
-            showToast(currentLang === 'en' ? `Copied: ${val}` : `Скопировано: ${val}`);
-            setTimeout(() => { el.style.color = originalColor; }, 300);
-        });
-    }
-
-    function checkFormInputs() {
-        if (editIndex > -1) return;
-        const f1Text = document.getElementById('f1-results').value.trim();
-        const hbText = document.getElementById('hb-results').value.trim();
-        const f1Fs = document.getElementById('f1-false').value;
-        const hbFs = document.getElementById('hb-false').value;
-        const hasData = f1Text.length > 0 || hbText.length > 0 || f1Fs !== '0' || hbFs !== '0';
-        const clearBtn = document.getElementById('clearInputBtn');
-        if (hasData) clearBtn.classList.add('visible');
-        else clearBtn.classList.remove('visible');
-    }
-
-    function clearCurrentInput() {
-        document.getElementById('f1-results').value = '';
-        document.getElementById('hb-results').value = '';
-        document.getElementById('f1-false').value = '0';
-        document.getElementById('hb-false').value = '0';
-        document.getElementById('is-weekend').checked = false;
-        document.querySelectorAll('.dynamic-task-checkbox').forEach(cb => cb.checked = false);
-        checkFormInputs();
-    }
-
-    function loadThemeInputs() {
-        document.getElementById('color-bg').value = customTheme.bg;
-        document.getElementById('color-panel').value = customTheme.panel;
-        document.getElementById('color-accent1').value = customTheme.acc1;
-        document.getElementById('color-accent2').value = customTheme.acc2;
-        document.getElementById('color-text').value = customTheme.text;
-        document.getElementById('color-border').value = customTheme.border;
-
-        document.getElementById('color-test-idle').value = customTestColors.idle;
-        document.getElementById('color-test-waiting').value = customTestColors.waiting;
-        document.getElementById('color-test-ready').value = customTestColors.ready;
-        document.getElementById('color-test-fail').value = customTestColors.fail;
-        document.getElementById('color-test-blue').value = customTestColors.blue;
-    }
-
-    function updateTheme() {
-        customTheme = {
-            bg: document.getElementById('color-bg').value,
-            panel: document.getElementById('color-panel').value,
-            acc1: document.getElementById('color-accent1').value,
-            acc2: document.getElementById('color-accent2').value,
-            text: document.getElementById('color-text').value,
-            border: document.getElementById('color-border').value
-        };
-        localStorage.setItem('reactionCustomTheme', JSON.stringify(customTheme));
-        applyThemeCSS();
-    }
-
-    function updateTestColors() {
-        customTestColors = {
-            idle: document.getElementById('color-test-idle').value,
-            waiting: document.getElementById('color-test-waiting').value,
-            ready: document.getElementById('color-test-ready').value,
-            fail: document.getElementById('color-test-fail').value,
-            blue: document.getElementById('color-test-blue').value
-        };
-        localStorage.setItem('reactionTestColors', JSON.stringify(customTestColors));
-        if (testState === 'idle' || testState === 'finished') {
-            document.getElementById('test-area').style.backgroundColor = customTestColors.idle;
-        }
-    }
-
-    function resetTheme() {
-        customTheme = { ...defaultTheme };
-        localStorage.setItem('reactionCustomTheme', JSON.stringify(customTheme));
-        loadThemeInputs();
-        applyThemeCSS();
-    }
-
-    function resetTestColors() {
-        customTestColors = { ...defaultTestColors };
-        localStorage.setItem('reactionTestColors', JSON.stringify(customTestColors));
-        loadThemeInputs();
-        if (testState === 'idle' || testState === 'finished') {
-            document.getElementById('test-area').style.backgroundColor = customTestColors.idle;
-        }
-        showToast(currentLang === 'en' ? "Test colors reset to default!" : "Цвета тестов сброшены по умолчанию!");
-    }
-
-    function applyThemeCSS() {
-        const doc = document.documentElement;
-        doc.style.setProperty('--bg-color', customTheme.bg);
-        doc.style.setProperty('--panel-bg', customTheme.panel);
-        doc.style.setProperty('--accent-cyan', customTheme.acc1);
-        doc.style.setProperty('--accent-teal', customTheme.acc2);
-        doc.style.setProperty('--text-main', customTheme.text);
-        doc.style.setProperty('--border', customTheme.border);
-        updateCharts();
-    }
-
-    const modal = document.getElementById('modalOverlay');
-
-    function openRegulations() {
-        modal.style.display = 'flex';
-        setTimeout(() => modal.classList.add('open'), 10);
-        document.body.style.overflow = 'hidden'; 
-    }
-
-    function closeRegulations() {
-        modal.classList.remove('open');
-        setTimeout(() => modal.style.display = 'none', 300);
-        document.body.style.overflow = ''; 
-    }
-
-    function closeRegulationsOnOverlay(event) {
-        if (event.target === modal) closeRegulations();
-    }
-
-    document.addEventListener('keydown', function(event) {
-        if (event.key === 'Escape') {
-            if (modal.classList.contains('open')) closeRegulations();
-            if (document.getElementById('testModalOverlay').classList.contains('open')) closeTestWindow();
-            const taskModal = document.getElementById('taskModalOverlay');
-            if (taskModal && taskModal.classList.contains('open')) closeTaskModal();
-        }
-    });
-
-    function toggleLanguage() {
-        currentLang = currentLang === 'ru' ? 'en' : 'ru';
-        localStorage.setItem('reactionLang', currentLang);
-        applyLanguage();
-    }
-
-    function applyLanguage() {
-        const isEn = currentLang === 'en';
-        document.title = isEn ? "Experiment: Reaction Speed" : "Эксперимент: Скорость реакции";
-        document.getElementById('toast').innerText = isEn ? "Text copied!" : "Текст скопирован!";
-
-        if (editIndex > -1) {
-            document.getElementById('formTitleText').innerText = isEn ? 'Editing Day' : 'Редактирование Дня';
-            document.getElementById('saveBtn').innerText = isEn ? "Update data" : "Обновить данные";
-        } else {
-            document.getElementById('formTitleText').innerText = isEn ? 'Data input for Day' : 'Ввод данных за День';
-            document.getElementById('saveBtn').innerText = isEn ? "Save results" : "Сохранить результаты";
-        }
-
-        document.getElementById('btn-open-tests').innerText = isEn ? "⏱ Tests" : "⏱ Тесты";
-        document.getElementById('btn-open-options').innerText = isEn ? "⚙ Options" : "⚙ Опции";
-
-        document.getElementById('lbl-f1-results').innerText = isEn ? "Formula 1 (5 averages):" : "Formula 1 (5 усредненных):";
-        document.getElementById('f1-results').placeholder = isEn ? "E.g.: 210 215 205..." : "Напр: 210 215 205...";
-        document.getElementById('lbl-f1-false').innerText = isEn ? "Formula 1 - False Starts:" : "Formula 1 - Фальшстарты:";
-
-        document.getElementById('lbl-hb-results').innerText = isEn ? "Human Benchmark (5 averages):" : "Human Benchmark (5 усредненных):";
-        document.getElementById('hb-results').placeholder = isEn ? "E.g.: 195 200 190..." : "Напр: 195 200 190...";
-        document.getElementById('lbl-hb-false').innerText = isEn ? "Human Benchmark - False Starts:" : "Human Benchmark - Фальшстарты:";
-
-        document.getElementById('new-task-input').placeholder = isEn ? "New item..." : "Новый пункт...";
-        document.getElementById('btn-add-task').innerText = isEn ? "Add" : "Добавить";
-        document.getElementById('lbl-is-weekend').innerText = isEn ? "Rest day (exclude from stats)" : "Выходной день (не учитывать в статистике)";
-
-        document.getElementById('clearInputBtn').innerText = isEn ? "Clear input" : "Очистить ввод";
-        document.getElementById('cancelEditBtn').innerText = isEn ? "Cancel edit" : "Отменить редактирование";
-
-        document.getElementById('hdr-stats-title').innerText = isEn ? "Statistics" : "Статистика";
-        document.getElementById('hdr-chart-reaction').innerText = isEn ? "Performance Dynamics (Active Days)" : "Динамика показателей (Активные дни)";
-        document.getElementById('hdr-chart-fs').innerText = isEn ? "False Starts (Active Days)" : "Фальшстарты (Активные дни)";
-
-        document.getElementById('hdr-history-title').innerText = isEn ? "Results History" : "История результатов";
-        document.getElementById('th-day').innerText = isEn ? "Day" : "День";
-        document.getElementById('th-type').innerText = isEn ? "Type" : "Тип";
-        document.getElementById('th-total').innerText = isEn ? "Total (Avg / Min / Max)" : "Общее (Ср / Мин / Макс)";
-        document.getElementById('th-f1').innerText = isEn ? "F1 (Avg / Min / Max)" : "F1 (Ср / Мин / Макс)";
-        document.getElementById('th-hb').innerText = isEn ? "HB (Avg / Min / Max)" : "HB (Ср / Мин / Макс)";
-        document.getElementById('th-fs').innerText = isEn ? "FS (F1/HB)" : "ФС (F1/HB)";
-        document.getElementById('th-tasks').innerText = isEn ? "Tasks" : "Задачи";
-        document.getElementById('th-actions').innerText = isEn ? "Actions" : "Действия";
-
-        document.getElementById('lbl-autofill-mode').innerText = isEn ? "Auto-add to form:" : "Автозапись в ввод:";
-        document.getElementById('opt-af-attempt').innerText = isEn ? "Every attempt" : "Каждая попытка";
-        document.getElementById('opt-af-each').innerText = isEn ? "Each average (1)" : "Каждый усредненный (1)";
-        document.getElementById('opt-af-full5').innerText = isEn ? "Only block (5 avgs)" : "Только массив (5 шт)";
-        document.getElementById('opt-af-off').innerText = isEn ? "Disabled" : "Выключено";
-
-        document.getElementById('btn-test-1').innerText = isEn ? "Human Benchmark" : "Human Benchmark";
-        document.getElementById('btn-test-2').innerText = isEn ? "Valtteri Bottas (F1)" : "Валттери Ботта (F1)";
-        document.getElementById('btn-test-3').innerText = isEn ? "Blue color (No-Go)" : "Синий цвет (No-Go)";
-        document.getElementById('btn-test-4').innerText = isEn ? "Audio Reaction" : "Аудио реакция (Звук)";
-        document.getElementById('lbl-hide-text').innerText = isEn ? "Hide text" : "Скрыть текст";
-        document.getElementById('lbl-hide-session').innerText = isEn ? "Hide session info" : "Скрыть попытки в серии";
-        document.getElementById('lbl-hide-panel').innerText = isEn ? "Hide panel" : "Скрыть панель";
-        document.getElementById('btn-test-fullscreen').innerText = isEn ? "⛶ Fullscreen" : "⛶ Полный экран";
-        document.getElementById('btn-test-close').innerText = isEn ? "✖ Close" : "✖ Закрыть";
-
-        document.getElementById('hdr-options-modal').innerText = isEn ? "OPTIONS AND REGULATIONS" : "ОПЦИИ И РЕГЛАМЕНТ";
-        document.getElementById('hdr-reg-1').innerText = isEn ? "1. GENERAL NORMS AND REQUIREMENTS" : "1. ОБЩИЕ НОРМЫ И ТРЕБОВАНИЯ";
-        document.getElementById('th-reg-param').innerText = isEn ? "Parameter" : "Параметр";
-        document.getElementById('th-reg-norm').innerText = isEn ? "Standard" : "Норматив";
-        document.getElementById('td-reg-min').innerHTML = `<strong>${isEn ? 'Daily minimum' : 'Дневной минимум'}</strong>`;
-        document.getElementById('td-reg-min-val').innerText = isEn ? "50 registered reaction tests" : "50 зарегистрированных тестов реакции";
-        document.getElementById('td-reg-reg').innerHTML = `<strong>${isEn ? 'Regularity' : 'Регулярность'}</strong>`;
-        document.getElementById('td-reg-reg-val').innerText = isEn ? "Skipping days is forbidden, but one rest day per week is mandatory" : "Пропускать дни запрещено, но обязательно каждую неделю один день отдыха";
-        document.getElementById('td-reg-surplus').innerHTML = `<strong>${isEn ? 'Surplus' : 'Сверхнорма'}</strong>`;
-        document.getElementById('td-reg-surplus-val').innerText = isEn ? "Not included in general statistics" : "Не учитывается в общей статистике";
-
-        document.getElementById('hdr-reg-2').innerText = isEn ? "2. TEST PROCEDURE" : "2. ПОРЯДОК ПРОВЕДЕНИЯ ТЕСТОВ";
-        document.getElementById('th-reg-test').innerText = isEn ? "Test" : "Тест";
-        document.getElementById('th-reg-spec').innerText = isEn ? "Specification" : "Спецификация";
-        document.getElementById('td-reg-f1-spec').innerText = isEn ? "5 attempts (averaged block)" : "5 попыток (усредненный блок)";
-        document.getElementById('td-reg-hb-spec').innerText = isEn ? "5 attempts (averaged block)" : "5 попыток (усредненный блок)";
-        document.getElementById('td-reg-calc').innerHTML = `<strong>${isEn ? 'Calculation' : 'Расчет'}</strong>`;
-        document.getElementById('td-reg-calc-val').innerText = isEn ? "Average, minimum, and maximum based on two disciplines" : "Среднее, минимум и максимум на основе двух дисциплин";
-
-        document.getElementById('hdr-reg-3').innerText = isEn ? "3. DAILY QUOTA FOR OSU! & KOVAAK'S" : "3. ДНЕВНАЯ НОРМА OSU! И KOVAAK'S";
-        document.getElementById('th-reg-disc').innerText = isEn ? "Discipline" : "Дисциплина";
-        document.getElementById('th-reg-req').innerText = isEn ? "Requirements" : "Требования";
-        document.getElementById('th-reg-stat').innerText = isEn ? "Status" : "Статус";
-        document.getElementById('td-reg-osu-req').innerText = isEn ? "Session from 30 mins (AR > 11, not below 11)" : "Сессия от 30 мин (AR > 11, не ниже 11)";
-        document.getElementById('status-osu-opt').innerText = isEn ? "Optional" : "Опционально";
-        document.getElementById('td-reg-kov-req').innerText = isEn ? "Reactive Tracking playlist from 30 mins" : "Плейлист Reactive Tracking от 30 мин";
-        document.getElementById('td-reg-kov-req-val').innerText = isEn ? "Required" : "Обязательно";
-
-        document.getElementById('hdr-reg-4').innerText = isEn ? "4. DEADLINES AND RETAKES" : "4. СРОКИ И ОТРАБОТКИ";
-        document.getElementById('th-reg-cat').innerText = isEn ? "Category" : "Категория";
-        document.getElementById('th-reg-cond').innerText = isEn ? "Conditions" : "Условия";
-        document.getElementById('td-reg-dur').innerHTML = `<strong>${isEn ? 'Duration' : 'Длительность'}</strong>`;
-        document.getElementById('td-reg-dur-val').innerText = isEn ? "3 months (08.09.2026 — 11.09.2026) with possibility of extension" : "3 месяца (08.09.2026 — 11.09.2026) с возможностью продления";
-        document.getElementById('td-reg-retake').innerHTML = `<strong>${isEn ? 'Retake' : 'Отработка'}</strong>`;
-        document.getElementById('td-reg-retake-val').innerText = isEn ? "Missed days and incomplete sessions must be retaken" : "Пропущенные дни и неполные сессии подлежат отработке";
-
-        document.getElementById('hdr-reg-5').innerText = isEn ? "5. РАНГИ И СРАВНЕНИЕ РЕАКЦИИ" : "5. РАНГИ И СРАВНЕНИЕ РЕАКЦИИ";
-        document.getElementById('th-rank-time').innerText = isEn ? "Time (ms)" : "Время (мс)";
-        document.getElementById('th-rank-rank').innerText = isEn ? "Rank" : "Ранг";
-        document.getElementById('th-rank-ref').innerText = isEn ? "Comparison / Reference" : "Сравнение / Ориентир";
-
-        document.getElementById('r1-name').innerHTML = `<strong>${isEn ? 'World Class' : 'Мировой уровень'}</strong>`;
-        document.getElementById('r1-desc').innerText = isEn ? "Pro esports players (osu! DT / FPS), F1 pilots" : "Про-киберспортсмены (osu! DT / FPS), пилоты F1";
-        document.getElementById('r2-name').innerHTML = `<strong>${isEn ? 'Elite' : 'Элита'}</strong>`;
-        document.getElementById('r2-desc').innerText = isEn ? "Top gamers, fighter pilots" : "Топ-геймеры, пилоты истребителей";
-        document.getElementById('r3-name').innerHTML = `<strong>${isEn ? 'Advanced' : 'Продвинутый'}</strong>`;
-        document.getElementById('r3-desc').innerText = isEn ? "Experienced gamers, athletes" : "Опытные геймеры, спортсмены";
-        document.getElementById('r4-name').innerHTML = `<strong>${isEn ? 'Normal' : 'Норма'}</strong>`;
-        document.getElementById('r4-desc').innerText = isEn ? "Average adult" : "Средний взрослый человек";
-        document.getElementById('r5-name').innerHTML = `<strong>${isEn ? 'Below Average' : 'Ниже среднего'}</strong>`;
-        document.getElementById('r5-desc').innerText = isEn ? "Amateurs, fatigue state" : "Любители, состояние усталости";
-        document.getElementById('r6-name').innerHTML = `<strong>${isEn ? 'Slow' : 'Замедленная'}</strong>`;
-        document.getElementById('r6-desc').innerText = isEn ? "Severe fatigue / lack of concentration" : "Сильное утомление / отсутствие концентрации";
-
-        document.getElementById('hdr-reg-6').innerText = isEn ? "6. INTERFACE & COLOR SETTINGS" : "6. НАСТРОЙКИ ИНТЕРФЕЙСА И ЦВЕТОВ";
-        document.getElementById('hdr-theme-main').innerText = isEn ? "6.1 General theme colors:" : "6.1 Основные цвета интерфейса:";
-        document.getElementById('lbl-theme-bg').innerText = isEn ? "Site background:" : "Фон сайта:";
-        document.getElementById('lbl-theme-panel').innerText = isEn ? "Panel background:" : "Фон панелей:";
-        document.getElementById('lbl-theme-acc1').innerText = isEn ? "Accent 1 (Charts/F1):" : "Акцент 1 (Графики/F1):";
-        document.getElementById('lbl-theme-acc2').innerText = isEn ? "Accent 2 (Markers/HB):" : "Акцент 2 (Маркеры/HB):";
-        document.getElementById('lbl-theme-text').innerText = isEn ? "Text & Headers:" : "Текст и Заголовки:";
-        document.getElementById('lbl-theme-border').innerText = isEn ? "Borders:" : "Границы:";
-        document.getElementById('btn-reset-theme').innerText = isEn ? "Reset theme colors to default" : "Сбросить цвета темы по умолчанию";
-
-        document.getElementById('hdr-theme-tests').innerText = isEn ? "6.2 Test screen colors:" : "6.2 Цвета экранов тестирования:";
-        document.getElementById('lbl-test-idle').innerText = isEn ? "Start Screen (Idle):" : "Экран старта (Idle):";
-        document.getElementById('lbl-test-waiting').innerText = isEn ? "Waiting Signal (Wait):" : "Ожидание сигнала (Wait):";
-        document.getElementById('lbl-test-ready').innerText = isEn ? "Click Signal (Ready):" : "Сигнал к нажатию (Ready):";
-        document.getElementById('lbl-test-fail').innerText = isEn ? "False Start / Fail:" : "Фальшстарт / Ошибка (Fail):";
-        document.getElementById('lbl-test-blue').innerText = isEn ? "No-Go False Target (Blue):" : "Ложная цель No-Go (Синий):";
-        document.getElementById('btn-reset-test-colors').innerText = isEn ? "Reset test colors to default" : "Сбросить цвета тестов по умолчанию";
-
-        document.getElementById('hdr-reg-audio').innerText = isEn ? "7. AUDIO TEST SETTINGS" : "7. НАСТРОЙКИ АУДИО ТЕСТА";
-        document.getElementById('audio-custom-desc').innerText = isEn 
-            ? "Upload your own custom sound effect (MP3, WAV, OGG) for reaction training with zero latency." 
-            : "Вы можете загрузить собственный короткий звук (MP3, WAV, OGG) для тренировки слуховой реакции с нулевой задержкой.";
-        document.getElementById('btn-upload-audio').innerText = isEn ? "🎵 Upload custom audio" : "🎵 Загрузить свой аудиофайл";
-        document.getElementById('btn-preview-audio').innerText = isEn ? "▶ Preview sound" : "▶ Прослушать звук";
-        document.getElementById('btn-reset-audio').innerText = isEn ? "🔄 Reset to stock sound" : "🔄 Сбросить на стоковый звук";
-
-        document.getElementById('hdr-reg-8').innerText = isEn ? "8. DATA MANAGEMENT & BACKUP" : "8. УПРАВЛЕНИЕ ДАННЫМИ И РЕЗЕРВНЫЕ КОПИИ";
-        document.getElementById('btn-renumber').innerText = isEn ? "🔢 Renumber days sequentially (1, 2, 3...)" : "🔢 Перенумеровать дни по порядку (1, 2, 3...)";
-        document.getElementById('btn-export-data').innerText = isEn ? "📥 Export to JSON" : "📥 Экспорт в JSON";
-        document.getElementById('btn-import-data').innerText = isEn ? "📤 Import from JSON" : "📤 Импорт из JSON";
-        document.getElementById('btn-clear-data').innerText = isEn ? "Reset all data" : "Сбросить все данные";
-
-        updateAudioUIStatus();
-        resetTestState();
-        updateDashboard();
-    }
-
-    function calculateStats(arr) {
-        if (!arr || arr.length === 0) return { mean: 0, min: 0, max: 0 };
-        return { 
-            mean: parseFloat((arr.reduce((a, b) => a + b, 0) / arr.length).toFixed(2)), 
-            min: Math.min(...arr), 
-            max: Math.max(...arr) 
-        };
-    }
-
-    function getNextSuggestedDay() {
-        if (experimentData.length === 0) return 1;
-        const existingDays = new Set(experimentData.map(d => d.day));
-        let day = 1;
-        while (existingDays.has(day)) {
-            day++;
-        }
-        return day;
-    }
-
-    function saveDay() {
-        const f1Raw = document.getElementById('f1-results').value.trim();
-        const hbRaw = document.getElementById('hb-results').value.trim();
-        const f1Input = f1Raw.split(/\s+/).map(Number).filter(n => !isNaN(n) && n > 0);
-        const hbInput = hbRaw.split(/\s+/).map(Number).filter(n => !isNaN(n) && n > 0);
-        const isWeekend = document.getElementById('is-weekend').checked;
-        const targetDay = parseInt(document.getElementById('input-day-number').value, 10) || getNextSuggestedDay();
-        const isEn = currentLang === 'en';
-
-        if (f1Input.length === 0 || hbInput.length === 0) {
-            alert(isEn ? "Valid numerical values required (space-separated)." : "Требуются корректные числовые значения (через пробел).");
-            return;
-        }
-
-        const f1Stats = calculateStats(f1Input);
-        f1Stats.falseStarts = parseInt(document.getElementById('f1-false').value) || 0;
-        
-        const hbStats = calculateStats(hbInput);
-        hbStats.falseStarts = parseInt(document.getElementById('hb-false').value) || 0;
-
-        const tasksState = {};
-        document.querySelectorAll('.dynamic-task-checkbox').forEach(cb => {
-            tasksState[cb.getAttribute('data-taskname')] = cb.checked;
-        });
-
-        const dayRecord = {
-            day: targetDay,
-            f1Raw, hbRaw, f1: f1Stats, hb: hbStats,
-            total: { 
-                mean: parseFloat(((f1Stats.mean + hbStats.mean) / 2).toFixed(2)), 
-                min: parseFloat(((f1Stats.min + hbStats.min) / 2).toFixed(2)), 
-                max: parseFloat(((f1Stats.max + hbStats.max) / 2).toFixed(2))
-            },
-            isWeekend,
-            tasks: tasksState
-        };
-
-        const existingIndex = experimentData.findIndex(d => d.day === targetDay);
-        if (existingIndex > -1 && existingIndex !== editIndex) {
-            const confirmOverwrite = confirm(isEn 
-                ? `Day ${targetDay} already exists. Do you want to overwrite its data?` 
-                : `День ${targetDay} уже существует. Перезаписать данные за этот день?`);
-            if (!confirmOverwrite) return;
-            experimentData[existingIndex] = dayRecord;
-        } else if (editIndex > -1) {
-            experimentData[editIndex] = dayRecord;
-        } else {
-            experimentData.push(dayRecord);
-        }
-
-        experimentData.sort((a, b) => a.day - b.day);
-        localStorage.setItem('reactionExperimentData', JSON.stringify(experimentData));
-        showToast(isEn ? `Day ${targetDay} saved!` : `День ${targetDay} сохранен!`);
-        resetForm();
-        updateDashboard();
-    }
-
-    function editDay(index) {
-        editIndex = index;
-        const data = experimentData[index];
-        if (!data) return;
-        const isEn = currentLang === 'en';
-        
-        document.getElementById('f1-results').value = data.f1Raw || '';
-        document.getElementById('hb-results').value = data.hbRaw || '';
-        document.getElementById('f1-false').value = data.f1.falseStarts;
-        document.getElementById('hb-false').value = data.hb.falseStarts;
-        document.getElementById('is-weekend').checked = !!data.isWeekend;
-        
-        document.querySelectorAll('.dynamic-task-checkbox').forEach(cb => {
-            const tName = cb.getAttribute('data-taskname');
-            if (data.tasks) {
-                cb.checked = !!data.tasks[tName];
-            } else {
-                if (tName.includes('Osu')) cb.checked = !!data.osu;
-                if (tName.includes('Kovaak')) cb.checked = !!data.kovaaks;
-            }
-        });
-        
-        document.getElementById('formTitleText').innerText = isEn ? 'Editing Day' : 'Редактирование Дня';
-        document.getElementById('input-day-number').value = data.day;
-        document.getElementById('saveBtn').innerText = isEn ? "Update data" : "Обновить данные";
-        document.getElementById('cancelEditBtn').style.display = "block";
-        document.getElementById('clearInputBtn').classList.remove('visible');
-    }
-
-    function deleteDay(index) {
-        const d = experimentData[index];
-        if (!d) return;
-        const isEn = currentLang === 'en';
-        const msg = isEn ? `Delete Day ${d.day}? Cannot be undone.` : `Удалить День ${d.day}? Восстановление невозможно.`;
-        if (confirm(msg)) {
-            experimentData.splice(index, 1);
-            localStorage.setItem('reactionExperimentData', JSON.stringify(experimentData));
-            cancelEdit();
-            updateDashboard();
-        }
-    }
-
-    function renumberDaysSequentially() {
-        const isEn = currentLang === 'en';
-        if (experimentData.length === 0) return;
-        if (confirm(isEn ? "Renumber all saved days from 1 to N in order?" : "Перенумеровать все сохраненные дни по порядку от 1 до N?")) {
-            experimentData.sort((a, b) => a.day - b.day);
-            experimentData.forEach((d, i) => d.day = i + 1);
-            localStorage.setItem('reactionExperimentData', JSON.stringify(experimentData));
-            updateDashboard();
-            resetForm();
-            showToast(isEn ? "Days renumbered!" : "Дни перенумерованы!");
-        }
-    }
-
-    function exportDataJSON() {
-        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(experimentData, null, 2));
-        const downloadAnchor = document.createElement('a');
-        downloadAnchor.setAttribute("href", dataStr);
-        downloadAnchor.setAttribute("download", `reaction_stats_backup_${new Date().toISOString().slice(0,10)}.json`);
-        document.body.appendChild(downloadAnchor);
-        downloadAnchor.click();
-        downloadAnchor.remove();
-        showToast(currentLang === 'en' ? "Backup downloaded!" : "Резервная копия скачана!");
-    }
-
-    function importDataJSON() {
-        document.getElementById('import-file-input').click();
-    }
-
-    function handleFileImport(event) {
-        const file = event.target.files[0];
-        if (!file) return;
-        const isEn = currentLang === 'en';
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            try {
-                const parsed = JSON.parse(e.target.result);
-                if (Array.isArray(parsed)) {
-                    experimentData = parsed;
-                    experimentData.sort((a, b) => a.day - b.day);
-                    localStorage.setItem('reactionExperimentData', JSON.stringify(experimentData));
-                    updateDashboard();
-                    resetForm();
-                    showToast(isEn ? "Data successfully imported!" : "Данные успешно импортированы!");
-                } else {
-                    alert(isEn ? "Invalid JSON file format (expected array)." : "Неверный формат JSON (ожидался массив).");
-                }
-            } catch (err) {
-                alert(isEn ? "Error reading JSON: " + err.message : "Ошибка чтения JSON: " + err.message);
-            }
-        };
-        reader.readAsText(file);
-        event.target.value = '';
-    }
-
-    function cancelEdit() {
-        editIndex = -1;
-        resetForm();
-    }
-
-    function resetForm() {
-        const isEn = currentLang === 'en';
-        document.getElementById('f1-results').value = '';
-        document.getElementById('hb-results').value = '';
-        document.getElementById('f1-false').value = '0';
-        document.getElementById('hb-false').value = '0';
-        document.getElementById('is-weekend').checked = false;
-        document.querySelectorAll('.dynamic-task-checkbox').forEach(cb => cb.checked = false);
-        
-        const nextDay = getNextSuggestedDay();
-        document.getElementById('formTitleText').innerText = isEn ? 'Data input for Day' : 'Ввод данных за День';
-        document.getElementById('input-day-number').value = nextDay;
-        document.getElementById('saveBtn').innerText = isEn ? "Save results" : "Сохранить результаты";
-        document.getElementById('cancelEditBtn').style.display = "none";
-        checkFormInputs();
-    }
-
-    function clearData() {
-        const msg = currentLang === 'en' ? "Completely clear all history?" : "Полностью очистить всю историю?";
-        if (confirm(msg)) {
-            localStorage.removeItem('reactionExperimentData');
-            experimentData = [];
-            closeRegulations();
-            init();
-        }
-    }
-
-    function getGrowthHTML(current, initial, label = '') {
-        if (initial === undefined || initial === null || isNaN(initial)) return '';
-        const percent = ((current - initial) / initial) * 100;
-        const cls = percent <= 0 ? 'positive' : 'negative'; 
-        const prefix = percent > 0 ? '+' : '';
-        return `<span class="growth ${cls}">${prefix}${percent.toFixed(2)}% ${label}</span>`;
-    }
-
-    function updateCurrentRank(latestMean) {
-        const rankDisplay = document.getElementById('currentRankDisplay');
-        const rows = [
-            document.getElementById('rank-1'), document.getElementById('rank-2'),
-            document.getElementById('rank-3'), document.getElementById('rank-4'),
-            document.getElementById('rank-5'), document.getElementById('rank-6')
-        ];
-        const isEn = currentLang === 'en';
-        const ms = isEn ? 'ms' : 'мс';
-        
-        rows.forEach(row => { if (row) row.classList.remove('rank-highlight'); });
-
-        if (!latestMean) {
-            rankDisplay.innerHTML = `${isEn ? 'Overall rank (today):' : 'Общий ранг (за сегодня):'} <span>${isEn ? 'No data' : 'Нет данных'}</span>`;
-            return;
-        }
-
-        let rankName = '';
-        let targetRowIndex = -1;
-
-        if (latestMean < 150) { rankName = isEn ? 'World Class' : 'Мировой уровень'; targetRowIndex = 0; }
-        else if (latestMean < 180) { rankName = isEn ? 'Elite' : 'Элита'; targetRowIndex = 1; }
-        else if (latestMean < 210) { rankName = isEn ? 'Advanced' : 'Продвинутый'; targetRowIndex = 2; }
-        else if (latestMean < 250) { rankName = isEn ? 'Normal' : 'Норма'; targetRowIndex = 3; }
-        else if (latestMean <= 300) { rankName = isEn ? 'Below Average' : 'Ниже среднего'; targetRowIndex = 4; }
-        else { rankName = isEn ? 'Slow' : 'Замедленная'; targetRowIndex = 5; }
-
-        if (targetRowIndex !== -1 && rows[targetRowIndex]) rows[targetRowIndex].classList.add('rank-highlight');
-        rankDisplay.innerHTML = `${isEn ? 'Overall rank (today - ' : 'Общий ранг (за сегодня - '}${latestMean}${ms}): <span>${rankName}</span>`;
-    }
-
-    function toggleWeeklyStat(el, containerId) {
-        const container = document.getElementById(containerId);
-        const isEn = currentLang === 'en';
-        if (container.style.display === 'none') {
-            container.style.display = 'block';
-            el.innerText = isEn ? '[ Hide week ]' : '[ Скрыть неделя ]';
-        } else {
-            container.style.display = 'none';
-            el.innerText = isEn ? '[ Week ]' : '[ Неделя ]';
-        }
-    }
-
-    function showDayTasks(index) {
-        const d = experimentData[index];
-        if (!d) return;
-        const isEn = currentLang === 'en';
-        let html = `<h3>${isEn ? 'Tasks for Day ' : 'Задачи за День '}${d.day}</h3><ul style="margin-top:10px; list-style:none; padding:0;">`;
-        if (d.tasks) {
-            for (const [tName, isDone] of Object.entries(d.tasks)) {
-                const status = isDone ? `<span style="color:#4caf50; font-weight:bold;">${isEn ? 'Completed' : 'Выполнено'}</span>` : `<span style="color:#ff4c4c;">${isEn ? 'Не выполнено' : 'Не выполнено'}</span>`;
-                html += `<li style="padding:8px 0; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;"><span>${tName}</span> ${status}</li>`;
-            }
-        } else {
-            const osuDone = d.osu ? 1 : 0;
-            const kovDone = d.kovaaks ? 1 : 0;
-            html += `<li style="padding:8px 0; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;"><span>Osu! HRDTHD (30 min)</span> ${osuDone ? 'Completed' : 'Не выполнено'}</li>`;
-            html += `<li style="padding:8px 0; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;"><span>Kovaak's (30 min)</span> ${kovDone ? 'Completed' : 'Не выполнено'}</li>`;
-        }
-        html += `</ul>`;
-
-        let taskModal = document.getElementById('taskModalOverlay');
-        if (!taskModal) {
-            const div = document.createElement('div');
-            div.className = 'modal-overlay';
-            div.id = 'taskModalOverlay';
-            div.innerHTML = `
-                <div class="modal-content" style="max-width:500px;">
-                    <div class="modal-header">
-                        <h1 style="font-size:1.2em; margin-bottom:0;">${isEn ? 'View Tasks' : 'Просмотр задач'}</h1>
-                        <button class="close-modal" onclick="closeTaskModal()">×</button>
-                    </div>
-                    <div class="modal-body" id="taskModalBody"></div>
-                </div>
-            `;
-            document.body.appendChild(div);
-            taskModal = div;
-        }
-        document.getElementById('taskModalBody').innerHTML = html;
-        taskModal.style.display = 'flex';
-        setTimeout(() => taskModal.classList.add('open'), 10);
-    }
-
-    function closeTaskModal() {
-        const taskModal = document.getElementById('taskModalOverlay');
-        if (taskModal) {
-            taskModal.classList.remove('open');
-            setTimeout(() => taskModal.style.display = 'none', 300);
-        }
-    }
-
-    function updateDashboard() {
-        const statsEl = document.getElementById('latest-stats');
-        const tbody = document.getElementById('history-body');
-
-        const targetSel = document.getElementById('target-day-select');
-        const compareSel = document.getElementById('compare-day-select');
-
-        const isEn = currentLang === 'en';
-        const ms = isEn ? 'ms' : 'мс';
-        const dayWord = isEn ? 'Day' : 'День';
-        const fromDayWord = isEn ? 'from Day' : 'от Дня';
-
-        if (experimentData.length === 0) {
-            if (targetSel) targetSel.innerHTML = '';
-            if (compareSel) compareSel.innerHTML = '';
-            statsEl.innerHTML = `<p style="color: var(--text-main); grid-column: 1/-1; text-align: center;">${isEn ? 'No saved data' : 'Нет сохраненных данных'}</p>`;
-            tbody.innerHTML = `<tr><td colspan="8">${isEn ? 'No saved data' : 'Нет сохраненных данных'}</td></tr>`;
-            updateCurrentRank(null);
-            updateCharts();
-            return;
-        }
-
-        if (targetSel && compareSel) {
-            const currentTargetVal = targetSel.value;
-            const currentCompareVal = compareSel.value;
-
-            let targetOpts = `<option value="latest">${isEn ? 'Latest completed' : 'Последний пройденный'}</option>`;
-            let compareOpts = '';
-            experimentData.forEach((d, idx) => {
-                const mark = d.isWeekend ? (isEn ? ' (Rest)' : ' (Выходной)') : '';
-                targetOpts += `<option value="${idx}">${isEn ? 'View:' : 'Просмотр:'} ${dayWord} ${d.day}${mark}</option>`;
-                compareOpts += `<option value="${idx}">${isEn ? 'Compare:' : 'Сравнение:'} ${dayWord} ${d.day}${mark}</option>`;
-            });
-            targetSel.innerHTML = targetOpts;
-            compareSel.innerHTML = compareOpts;
-
-            if (currentTargetVal !== '') targetSel.value = currentTargetVal;
-            if (currentCompareVal !== '' && parseInt(currentCompareVal, 10) < experimentData.length) compareSel.value = currentCompareVal;
-            else compareSel.value = 0;
-        }
-
-        let targetIdx = targetSel && targetSel.value !== 'latest' && targetSel.value !== '' ? parseInt(targetSel.value, 10) : experimentData.length - 1;
-        let compareIdx = compareSel && compareSel.value !== '' ? parseInt(compareSel.value, 10) : 0;
-
-        if (isNaN(targetIdx) || targetIdx >= experimentData.length) targetIdx = experimentData.length - 1;
-        if (isNaN(compareIdx) || compareIdx >= experimentData.length) compareIdx = 0;
-
-        const latest = experimentData[targetIdx];
-        const compareTarget = experimentData[compareIdx];
-        const label = `${fromDayWord} ${compareTarget.day}`;
-
-        const activeDays = experimentData.filter(d => !d.isWeekend);
-        const totalF1FS = activeDays.reduce((sum, d) => sum + d.f1.falseStarts, 0);
-        const totalHBFS = activeDays.reduce((sum, d) => sum + d.hb.falseStarts, 0);
-
-        const last7 = activeDays.slice(-7);
-        const weekMean = last7.length ? (last7.reduce((sum, d) => sum + d.total.mean, 0) / last7.length).toFixed(2) : 0;
-        const weekMeanF1 = last7.length ? (last7.reduce((sum, d) => sum + d.f1.mean, 0) / last7.length).toFixed(2) : 0;
-        const weekMeanHB = last7.length ? (last7.reduce((sum, d) => sum + d.hb.mean, 0) / last7.length).toFixed(2) : 0;
-        const weekTotalFS = last7.length ? last7.reduce((sum, d) => sum + d.f1.falseStarts + d.hb.falseStarts, 0) : 0;
-        const weekMeanDelta = last7.length ? (last7.reduce((sum, d) => sum + (d.total.max - d.total.min), 0) / last7.length).toFixed(2) : 0;
-        const dayDelta = (latest.total.max - latest.total.min).toFixed(2);
-
-        const avgText = isEn ? 'Avg:' : 'Ср:';
-        const minText = isEn ? 'Min:' : 'Мин:';
-        const maxText = isEn ? 'Max:' : 'Макс:';
-        const weekBtnText = isEn ? '[ Week ]' : '[ Неделя ]';
-        const weeklyAvgHeader = isEn ? 'Weekly average (Act.)' : 'Среднее за неделю (Акт.)';
-        const daysCountText = `${isEn ? 'Over the last ' : 'За последние '}${last7.length}${isEn ? ' active days' : ' активных дней'}`;
-
-        statsEl.innerHTML = `
-            <div class="stat-card">
-                <div>${isEn ? 'Overall Stats' : 'Общие показатели'} (${dayWord} ${latest.day}) <span style="font-size:0.75em; color:var(--accent-cyan); cursor:pointer; float:right;" onclick="toggleWeeklyStat(this, 'weekly-total')">${weekBtnText}</span></div>
-                <div class="stat-value">${avgText} <span class="copyable" onclick="copyVal('${latest.total.mean}', this)">${latest.total.mean}</span>${ms}</div>
-                <div class="stat-subtext">${minText} ${latest.total.min}${ms} | ${maxText} ${latest.total.max}${ms}</div>
-                ${getGrowthHTML(latest.total.mean, compareTarget.total.mean, label)}
-                <div id="weekly-total" style="display:none; margin-top:10px; padding-top:8px; border-top:1px dashed var(--border);">
-                    <div style="color: var(--accent-cyan); font-weight:bold; font-size:0.9em;">${weeklyAvgHeader}</div>
-                    <div style="font-size:1.1em; font-weight:bold; color:var(--text-main);">${weekMean}${ms}</div>
-                    <div style="font-size:0.8em; opacity:0.8;">${daysCountText}</div>
-                </div>
-            </div>
-            <div class="stat-card">
-                <div>Formula 1 (${dayWord} ${latest.day}) <span style="font-size:0.75em; color:var(--accent-cyan); cursor:pointer; float:right;" onclick="toggleWeeklyStat(this, 'weekly-f1')">${weekBtnText}</span></div>
-                <div class="stat-value">${avgText} <span class="copyable" onclick="copyVal('${latest.f1.mean}', this)">${latest.f1.mean}</span>${ms}</div>
-                <div class="stat-subtext">${minText} ${latest.f1.min}${ms} | ${maxText} ${latest.f1.max}${ms}</div>
-                ${getGrowthHTML(latest.f1.mean, compareTarget.f1.mean, label)}
-                <div id="weekly-f1" style="display:none; margin-top:10px; padding-top:8px; border-top:1px dashed var(--border);">
-                    <div style="color: var(--accent-cyan); font-weight:bold; font-size:0.9em;">${weeklyAvgHeader}</div>
-                    <div style="font-size:1.1em; font-weight:bold; color:var(--text-main);">${weekMeanF1}${ms}</div>
-                    <div style="font-size:0.8em; opacity:0.8;">${daysCountText}</div>
-                </div>
-            </div>
-            <div class="stat-card">
-                <div>Human Benchmark (${dayWord} ${latest.day}) <span style="font-size:0.75em; color:var(--accent-cyan); cursor:pointer; float:right;" onclick="toggleWeeklyStat(this, 'weekly-hb')">${weekBtnText}</span></div>
-                <div class="stat-value">${avgText} <span class="copyable" onclick="copyVal('${latest.hb.mean}', this)">${latest.hb.mean}</span>${ms}</div>
-                <div class="stat-subtext">${minText} ${latest.hb.min}${ms} | ${maxText} ${latest.hb.max}${ms}</div>
-                ${getGrowthHTML(latest.hb.mean, compareTarget.hb.mean, label)}
-                <div id="weekly-hb" style="display:none; margin-top:10px; padding-top:8px; border-top:1px dashed var(--border);">
-                    <div style="color: var(--accent-cyan); font-weight:bold; font-size:0.9em;">${weeklyAvgHeader}</div>
-                    <div style="font-size:1.1em; font-weight:bold; color:var(--text-main);">${weekMeanHB}${ms}</div>
-                    <div style="font-size:0.8em; opacity:0.8;">${daysCountText}</div>
-                </div>
-            </div>
-            <div class="stat-card">
-                <div>${isEn ? 'False Starts (Total Act.)' : 'Фальшстарты (Всего акт.)'} <span style="font-size:0.75em; color:var(--accent-cyan); cursor:pointer; float:right;" onclick="toggleWeeklyStat(this, 'weekly-fs')">${weekBtnText}</span></div>
-                <div class="stat-value"><span class="copyable" onclick="copyVal('${totalF1FS + totalHBFS}', this)">${totalF1FS + totalHBFS}</span></div>
-                <div class="stat-subtext">F1: ${totalF1FS} | HB: ${totalHBFS}</div>
-                <div id="weekly-fs" style="display:none; margin-top:10px; padding-top:8px; border-top:1px dashed var(--border);">
-                    <div style="color: var(--accent-cyan); font-weight:bold; font-size:0.9em;">${isEn ? 'Weekly total (Act.)' : 'Всего за неделю (Акт.)'}</div>
-                    <div style="font-size:1.1em; font-weight:bold; color:var(--text-main);">${weekTotalFS}</div>
-                    <div style="font-size:0.8em; opacity:0.8;">${daysCountText}</div>
-                </div>
-            </div>
-            <div class="stat-card">
-                <div>${isEn ? 'Stability' : 'Стабильность'} (${dayWord} ${latest.day}) <span style="font-size:0.75em; color:var(--accent-cyan); cursor:pointer; float:right;" onclick="toggleWeeklyStat(this, 'weekly-stability')">${weekBtnText}</span></div>
-                <div class="stat-value">${dayDelta}${ms}</div>
-                <div class="stat-subtext">${isEn ? 'Delta (Max-Min Spread)' : 'Дельта (Разброс Макс-Мин)'}</div>
-                <div id="weekly-stability" style="display:none; margin-top:10px; padding-top:8px; border-top:1px dashed var(--border);">
-                    <div style="color: var(--accent-cyan); font-weight:bold; font-size:0.9em;">${isEn ? 'Weekly average delta' : 'Средняя дельта за неделю'}</div>
-                    <div style="font-size:1.1em; font-weight:bold; color:var(--text-main);">${weekMeanDelta}${ms}</div>
-                    <div style="font-size:0.8em; opacity:0.8;">${daysCountText}</div>
-                </div>
-            </div>
-        `;
-
-        tbody.innerHTML = '';
-        [...experimentData].reverse().forEach((d) => {
-            const actualIndex = experimentData.indexOf(d);
-            const totalT = tasksConfig.length;
-            let tasksRender = '';
-            if (d.tasks) {
-                const doneT = Object.values(d.tasks).filter(Boolean).length;
-                tasksRender = `<span class="copyable" onclick="showDayTasks(${actualIndex})" title="${isEn ? 'Click to view tasks' : 'Нажмите для просмотра задач'}">${doneT}/${totalT}</span>`;
-            } else {
-                const osuDone = d.osu ? 1 : 0;
-                const kovDone = d.kovaaks ? 1 : 0;
-                tasksRender = `<span class="copyable" onclick="showDayTasks(${actualIndex})">${osuDone + kovDone}/${totalT}</span>`;
-            }
-
-            const trStyle = d.isWeekend ? 'opacity: 0.6; background: rgba(255,255,255,0.02);' : '';
-            const typeLabel = d.isWeekend ? `<span style="color:var(--accent-teal);">${isEn ? 'Rest' : 'Выходной'}</span>` : (isEn ? 'Active' : 'Активный');
-
-            tbody.innerHTML += `
-                <tr style="${trStyle}">
-                    <td>${d.day}</td>
-                    <td>${typeLabel}</td>
-                    <td><strong>${d.total.mean}${ms}</strong> / ${d.total.min} / ${d.total.max}</td>
-                    <td>${d.f1.mean} / ${d.f1.min} / ${d.f1.max}</td>
-                    <td>${d.hb.mean} / ${d.hb.min} / ${d.hb.max}</td>
-                    <td>${d.f1.falseStarts} / ${d.hb.falseStarts}</td>
-                    <td>${tasksRender}</td>
-                    <td>
-                        <button class="action-btn btn-alt" onclick="editDay(${actualIndex})">✎</button>
-                        <button class="action-btn" onclick="deleteDay(${actualIndex})">✖</button>
-                    </td>
-                </tr>
-            `;
-        });
-
-        updateCurrentRank(latest.total.mean);
-        updateCharts();
-    }
-
-    function updateCharts() {
-        const activeData = experimentData.filter(d => !d.isWeekend);
-
-        if (activeData.length === 0) {
-            if (reactionChartInstance) reactionChartInstance.destroy();
-            if (falseStartsChartInstance) falseStartsChartInstance.destroy();
-            return;
-        }
-
-        const isEn = currentLang === 'en';
-        const ms = isEn ? 'ms' : 'мс';
-        const dayPrefix = isEn ? 'D' : 'Д';
-
-        const style = getComputedStyle(document.documentElement);
-        const cText = style.getPropertyValue('--text-main').trim();
-        const cBorder = style.getPropertyValue('--border').trim();
-        const cAcc1 = style.getPropertyValue('--accent-cyan').trim();
-        const cAcc2 = style.getPropertyValue('--accent-teal').trim();
-
-        const labels = activeData.map(d => `${dayPrefix}${d.day}`);
-        
-        const ctxReaction = document.getElementById('reactionChart').getContext('2d');
-        if (reactionChartInstance) reactionChartInstance.destroy();
-        reactionChartInstance = new Chart(ctxReaction, {
-            type: 'line',
-            data: {
-                labels,
-                datasets: [
-                    { label: isEn ? 'Total Avg' : 'Общее Ср', data: activeData.map(d => d.total.mean), borderColor: cText, backgroundColor: cText + '15', borderWidth: 2, fill: true, tension: 0.3, pointRadius: 2, pointHoverRadius: 5 },
-                    { label: isEn ? 'F1 Avg' : 'F1 Ср', data: activeData.map(d => d.f1.mean), borderColor: cAcc1, borderWidth: 1.5, borderDash: [5, 5], tension: 0.3, pointRadius: 0 },
-                    { label: isEn ? 'HB Avg' : 'HB Ср', data: activeData.map(d => d.hb.mean), borderColor: cAcc2, borderWidth: 1.5, borderDash: [5, 5], tension: 0.3, pointRadius: 0 }
-                ]
-            },
-            options: {
-                responsive: true, maintainAspectRatio: false, color: cText,
-                scales: { y: { grid: { color: cBorder }, ticks: { color: cText, callback: v => v + ms } }, x: { grid: { color: cBorder }, ticks: { color: cText } } },
-                plugins: { legend: { labels: { color: cText, font: { size: 10 } } }, tooltip: { mode: 'index', intersect: false } }
-            }
-        });
-
-        const ctxFalse = document.getElementById('falseStartsChart').getContext('2d');
-        if (falseStartsChartInstance) falseStartsChartInstance.destroy();
-        falseStartsChartInstance = new Chart(ctxFalse, {
-            type: 'bar',
-            data: {
-                labels,
-                datasets: [
-                    { label: isEn ? 'F1 FS' : 'F1 ФС', data: activeData.map(d => d.f1.falseStarts), backgroundColor: cAcc1 },
-                    { label: isEn ? 'HB FS' : 'HB ФС', data: activeData.map(d => d.hb.falseStarts), backgroundColor: cAcc2 }
-                ]
-            },
-            options: {
-                responsive: true, maintainAspectRatio: false, color: cText,
-                scales: { y: { stacked: true, grid: { color: cBorder }, ticks: { color: cText, stepSize: 1 } }, x: { stacked: true, grid: { color: cBorder }, ticks: { color: cText } } },
-                plugins: { legend: { labels: { color: cText, font: { size: 10 } } } }
-            }
-        });
-    }
-
-    let currentTestType = 1; 
-    let testState = 'idle'; 
-    let testStartMs = 0;
-    let testTimeoutId1 = null;
-    let testTimeoutId2 = null;
-    let f1IntervalId = null;
-
-    function openTestWindow() {
-        document.getElementById('testModalOverlay').classList.add('open');
-        document.getElementById('testModalOverlay').style.display = 'flex';
-        setTestType(1);
-    }
-
-    function closeTestWindow() {
-        document.getElementById('testModalOverlay').classList.remove('open');
-        setTimeout(() => document.getElementById('testModalOverlay').style.display = 'none', 300);
-        if (document.fullscreenElement) document.exitFullscreen().catch(()=>{});
-        resetTestState();
-    }
-
-    function toggleTestFullscreen() {
-        const elem = document.getElementById('test-modal-content');
-        if (!document.fullscreenElement) {
-            elem.requestFullscreen().catch(err => alert(`Fullscreen error: ${err.message}`));
-        } else {
-            document.exitFullscreen();
-        }
-    }
-
-    function toggleTestText() {
-        const isHidden = document.getElementById('hide-test-text').checked;
-        const area = document.getElementById('test-area');
-        if (isHidden) area.classList.add('hide-text');
-        else area.classList.remove('hide-text');
-    }
-
-    function toggleTestSessionInfo() {
-        const isHidden = document.getElementById('hide-test-session-info').checked;
-        const content = document.getElementById('test-modal-content');
-        if (isHidden) content.classList.add('hide-session-info');
-        else content.classList.remove('hide-session-info');
-    }
-
-    function toggleTestHeader() {
-        const isHidden = document.getElementById('hide-test-header').checked;
-        const content = document.getElementById('test-modal-content');
-        if (isHidden) content.classList.add('hide-header');
-        else content.classList.remove('hide-header');
-    }
-
-    function setTestType(type) {
-        currentTestType = type;
-        document.querySelectorAll('[id^="btn-test-"]').forEach(btn => btn.classList.remove('test-active-btn'));
-        const activeBtn = document.getElementById(`btn-test-${type}`);
-        if (activeBtn) activeBtn.classList.add('test-active-btn');
-        
-        const area = document.getElementById('test-area');
-        if (type === 2) {
-            area.classList.add('f1-mode');
-        } else {
-            area.classList.remove('f1-mode');
-        }
-
-        resetTestState();
-        updateTestSessionInfo();
-    }
-
-    function updateTestSessionInfo() {
-        const attempts = testAttempts[currentTestType] || [];
-        const averages = testAverages[currentTestType] || [];
-        const infoEl = document.getElementById('test-session-info');
-        const isEn = currentLang === 'en';
-        if (infoEl) {
-            const attemptsList = attempts.length > 0 ? attempts.join(', ') : (isEn ? 'empty' : 'пусто');
-            const str1 = isEn ? 'Attempt:' : 'Попытка:';
-            const str2 = isEn ? 'in current session' : 'в текущей серии';
-            const str3 = isEn ? 'Accumulated averages' : 'Накоплено усредненных';
-            infoEl.innerHTML = `${str1} ${attempts.length}/5 ${str2} [${attemptsList}] | ${str3} (${averages.length}/5): [${averages.join(', ')}]`;
-        }
-    }
-
-    function resetTestState() {
-        clearTimeout(testTimeoutId1);
-        clearTimeout(testTimeoutId2);
-        clearInterval(f1IntervalId);
-        testState = 'idle';
-        const isEn = currentLang === 'en';
-        const area = document.getElementById('test-area');
-        area.classList.remove('finished', 'failed');
-        const msg = document.getElementById('test-message');
-        const submsg = document.getElementById('test-submessage');
-        const f1Lights = document.getElementById('f1-lights');
-        
-        area.style.backgroundColor = customTestColors.idle;
-        f1Lights.style.display = currentTestType === 2 ? 'flex' : 'none';
-        document.querySelectorAll('.f1-light').forEach(l => l.classList.remove('on'));
-
-        if (currentTestType === 1) {
-            msg.innerText = isEn ? "Click to start" : "Кликните чтобы начать";
-            submsg.innerText = isEn ? "Classic test" : "Классический тест";
-        } else if (currentTestType === 2) {
-            msg.innerText = isEn ? "Click to start" : "Кликните чтобы начать";
-            submsg.innerText = isEn ? "Valtteri Bottas: wait for all lights to turn off" : "Валттери Ботта: дождитесь выключения всех огней";
-        } else if (currentTestType === 3) {
-            msg.innerText = isEn ? "Click to start" : "Кликните чтобы начать";
-            submsg.innerText = isEn ? "Click on green. DO NOT click on blue!" : "Если цвет зеленый - кликайте. Если синий - НЕ КЛИКАТЬ!";
-        } else if (currentTestType === 4) {
-            msg.innerText = isEn ? "Click to start" : "Кликните чтобы начать";
-            submsg.innerText = isEn ? "Audio Reaction: react to the sound (no visual color cue)" : "Аудио реакция: реагируйте на звук (без визуальной смены цвета)";
-        }
-        updateTestSessionInfo();
-    }
-
-    function handleTestClick() {
-        const area = document.getElementById('test-area');
-        const msg = document.getElementById('test-message');
-        const submsg = document.getElementById('test-submessage');
-        const isEn = currentLang === 'en';
-        const ms = isEn ? 'ms' : 'мс';
-
-        if (testState === 'idle' || testState === 'finished' || testState === 'fail') {
-            if (testAverages[currentTestType].length >= 5 && testAttempts[currentTestType].length === 0) {
-                testAverages[currentTestType] = [];
-                updateTestSessionInfo();
-            }
-
-            area.classList.remove('finished', 'failed');
-            if (currentTestType === 1) {
-                testState = 'waiting';
-                area.style.backgroundColor = customTestColors.waiting;
-                msg.innerText = isEn ? "Wait for green..." : "Ждите зеленый...";
-                submsg.innerText = "";
-                const randomTime = Math.random() * 3000 + 2000;
-                testTimeoutId1 = setTimeout(() => {
-                    testState = 'ready';
-                    area.style.backgroundColor = customTestColors.ready;
-                    msg.innerText = isEn ? "CLICK NOW!" : "КЛИКАЙ!";
-                    testStartMs = performance.now();
-                }, randomTime);
-            } else if (currentTestType === 2) {
-                testState = 'waiting';
-                area.style.backgroundColor = customTestColors.idle;
-                msg.innerText = isEn ? "Lights turning on..." : "Загораются огни...";
-                submsg.innerText = "";
-                
-                let lightIndex = 0;
-                const lights = document.querySelectorAll('.f1-light');
-                lights.forEach(l => l.classList.remove('on'));
-
-                f1IntervalId = setInterval(() => {
-                    if (lightIndex < 5) {
-                        lights[lightIndex].classList.add('on');
-                        lightIndex++;
-                    } else {
-                        clearInterval(f1IntervalId);
-                        const randomTime = Math.random() * 2000 + 1000;
-                        testTimeoutId1 = setTimeout(() => {
-                            lights.forEach(l => l.classList.remove('on'));
-                            testState = 'ready';
-                            area.style.backgroundColor = customTestColors.idle;
-                            msg.innerText = isEn ? "GO!" : "ПУСК!";
-                            testStartMs = performance.now();
-                        }, randomTime);
-                    }
-                }, 1000);
-            } else if (currentTestType === 3) {
-                testState = 'waiting';
-                area.style.backgroundColor = customTestColors.waiting;
-                msg.innerText = isEn ? "Wait..." : "Ожидание...";
-                submsg.innerText = "";
-                const randomTime = Math.random() * 3000 + 2000;
-                const isBlue = Math.random() < 0.3;
-                testTimeoutId1 = setTimeout(() => {
-                    if (isBlue) {
-                        testState = 'blue';
-                        area.style.backgroundColor = customTestColors.blue;
-                        msg.innerText = isEn ? "BLUE! DON'T CLICK!" : "СИНИЙ! НЕ КЛИКАЙ!";
-                        testTimeoutId2 = setTimeout(() => {
-                            if (testState === 'blue') {
-                                msg.innerText = isEn ? "Good! Avoided blue" : "Отлично! Не кликнули на синий";
-                                submsg.innerText = isEn ? "Click to continue" : "Кликните для продолжения";
-                                area.style.backgroundColor = customTestColors.idle;
-                                area.classList.add('finished');
-                                testState = 'finished';
-                            }
-                        }, 1500);
-                    } else {
-                        testState = 'ready';
-                        area.style.backgroundColor = customTestColors.ready;
-                        msg.innerText = isEn ? "CLICK!" : "КЛИКАЙ!";
-                        testStartMs = performance.now();
-                    }
-                }, randomTime);
-            } else if (currentTestType === 4) {
-                testState = 'waiting';
-                area.style.backgroundColor = customTestColors.idle;
-                msg.innerText = isEn ? "Listen carefully..." : "Слушайте звук...";
-                submsg.innerText = isEn ? "Colors will NOT change" : "Цвет экрана не изменится";
-                
-                getAudioContext();
-                
-                const randomTime = Math.random() * 3000 + 2000;
-                testTimeoutId1 = setTimeout(() => {
-                    testState = 'ready';
-                    playAudioSignal();
-                    area.style.backgroundColor = customTestColors.idle;
-                    msg.innerText = isEn ? "CLICK NOW!" : "КЛИКАЙ!";
-                    testStartMs = performance.now();
-                }, randomTime);
-            }
-        } else if (testState === 'waiting') {
-            clearTimeout(testTimeoutId1);
-            clearInterval(f1IntervalId);
-            testState = 'fail';
-            area.classList.add('failed');
-            area.style.backgroundColor = customTestColors.fail;
-            msg.innerText = isEn ? "Too soon!" : "Фальшстарт!";
-            submsg.innerText = isEn ? "Click to try again" : "Кликните для повтора";
-        } else if (testState === 'blue') {
-            clearTimeout(testTimeoutId2);
-            testState = 'fail';
-            area.classList.add('failed');
-            area.style.backgroundColor = customTestColors.fail;
-            msg.innerText = isEn ? "Mistake! It was blue!" : "Ошибка! Это был синий цвет!";
-            submsg.innerText = isEn ? "Click to try again" : "Кликните для повтора";
-        } else if (testState === 'ready') {
-            const reactionTime = Math.round(performance.now() - testStartMs);
-            testState = 'finished';
-            area.classList.add('finished');
-            area.style.backgroundColor = customTestColors.idle;
-
-            testAttempts[currentTestType].push(reactionTime);
-
-            if (autoFillMode === 'attempt' && currentTestType !== 3 && currentTestType !== 4) {
-                pushResultsToInput(currentTestType, [reactionTime]);
-            }
-            
-            if (testAttempts[currentTestType].length === 5) {
-                const avg = Math.round(testAttempts[currentTestType].reduce((a, b) => a + b, 0) / 5);
-                testAverages[currentTestType].push(avg);
-                
-                if (currentTestType !== 3 && currentTestType !== 4) {
-                    if (autoFillMode === 'each') {
-                        pushResultsToInput(currentTestType, [avg]);
-                    } else if (autoFillMode === 'full5') {
-                        if (testAverages[currentTestType].length === 5) {
-                            pushResultsToInput(currentTestType, [...testAverages[currentTestType]]);
-                        }
-                    }
-                }
-
-                testAttempts[currentTestType] = [];
-
-                if (testAverages[currentTestType].length === 5) {
-                    const totalAvg = Math.round(testAverages[currentTestType].reduce((a, b) => a + b, 0) / 5);
-                    msg.innerHTML = isEn ? "🎯 5/5 AVERAGES COLLECTED!" : "🎯 5/5 УСРЕДНЕННЫХ НАКОПЛЕНО!";
-                    
-                    let autoFillNote = '';
-                    if (currentTestType === 3) {
-                        autoFillNote = isEn ? 'Training test (No-Go): results are not added to stats.' : 'Тренировочный тест (No-Go): результаты не вносятся в статистику.';
-                    } else if (currentTestType === 4) {
-                        autoFillNote = isEn ? 'Audio reaction test: results are not added to stats.' : 'Аудио тест: результаты не вносятся в статистику.';
-                    } else if (autoFillMode === 'full5') {
-                        autoFillNote = isEn ? 'Block of 5 averages added to the form!' : 'Все 5 усредненных результатов записаны в форму!';
-                    } else if (autoFillMode === 'each') {
-                        autoFillNote = isEn ? 'All 5 averages were added to the form!' : 'Все 5 усредненных результатов добавлены в форму!';
-                    } else if (autoFillMode === 'attempt') {
-                        autoFillNote = isEn ? 'All individual attempts were added to the form!' : 'Все индивидуальные попытки добавлены в форму!';
-                    } else {
-                        autoFillNote = isEn ? 'Auto-add is disabled (results not sent to form).' : 'Автозапись отключена (в форму не отправлено).';
-                    }
-
-                    submsg.innerHTML = `
-                        <div style="background: rgba(76, 175, 80, 0.25); border: 2px solid #4caf50; border-radius: 10px; padding: 15px 25px; margin-top: 15px; display: inline-block; box-shadow: 0 0 25px rgba(76, 175, 80, 0.4);">
-                            <div style="color: #4caf50; font-weight: bold; font-size: 1.25em;">
-                                🏆 ${isEn ? 'Daily set of 5 averages completed!' : 'Полный блок из 5 усредненных результатов готов!'}
-                            </div>
-                            <div style="color: #fff; font-size: 1em; margin-top: 6px;">
-                                ${isEn ? 'Latest set average:' : 'Среднее последней серии:'} <strong>${avg} ${ms}</strong>
-                            </div>
-                            <div style="color: var(--text-main); font-size: 0.9em; margin-top: 4px;">
-                                ${isEn ? 'All 5 averages:' : 'Все 5 значений:'} [<strong>${testAverages[currentTestType].join(', ')}</strong> ${ms}]
-                            </div>
-                            <div style="color: var(--accent-cyan); font-weight: bold; font-size: 1.05em; margin-top: 6px;">
-                                ${isEn ? 'Total block average:' : 'Общее среднее блока:'} ${totalAvg} ${ms}
-                            </div>
-                        </div>
-                        <div style="margin-top: 12px; font-size: 0.85em; opacity: 0.9; color: var(--accent-cyan);">
-                            ${autoFillNote}<br>${isEn ? 'Click anywhere to start a new set' : 'Кликните, чтобы начать новый блок'}
-                        </div>
-                    `;
-                    showToast(isEn ? `🎉 5/5 block complete! (${totalAvg} ${ms})` : `🎉 Блок из 5 усредненных готов! (${totalAvg} ${ms})`);
-                } else {
-                    msg.innerText = `${reactionTime} ${ms}`;
-                    
-                    let eachNote = '';
-                    if (currentTestType === 3 || currentTestType === 4) {
-                        eachNote = '';
-                    } else if (autoFillMode === 'each') {
-                        eachNote = isEn ? ' (added to form)' : ' (добавлено в форму)';
-                    } else if (autoFillMode === 'full5') {
-                        eachNote = isEn ? ' (will add after 5/5)' : ' (запишется после 5/5)';
-                    } else if (autoFillMode === 'attempt') {
-                        eachNote = isEn ? ' (attempt added to form)' : ' (попытка добавлена)';
-                    }
-
-                    submsg.innerHTML = `
-                        <div style="background: rgba(0,0,0,0.45); border: 1px solid var(--accent-cyan); border-radius: 8px; padding: 10px 20px; margin-top: 12px; display: inline-block;">
-                            <div style="color: var(--accent-cyan); font-weight: bold; font-size: 1.15em;">
-                                ⚡ ${isEn ? 'Set Complete! Average:' : 'Серия завершена! Среднее:'} ${avg} ${ms}${eachNote}
-                            </div>
-                            <div style="color: var(--text-main); font-size: 0.85em; margin-top: 4px;">
-                                ${isEn ? 'Averages collected:' : 'Накоплено усредненных:'} <strong>${testAverages[currentTestType].length}/5</strong> [${testAverages[currentTestType].join(', ')}]
-                            </div>
-                        </div>
-                        <div style="margin-top: 10px; font-size: 0.85em; opacity: 0.8;">
-                            ${isEn ? 'Click to continue to next set' : 'Кликните для перехода к следующей серии'}
-                        </div>
-                    `;
-                    showToast(isEn ? `⚡ Average #${testAverages[currentTestType].length} (${avg} ${ms}) recorded!` : `⚡ Среднее #${testAverages[currentTestType].length} (${avg} ${ms}) зафиксировано!`);
-                }
-            } else {
-                let attemptSuffix = (autoFillMode === 'attempt' && currentTestType !== 3 && currentTestType !== 4) ? (isEn ? ' (added)' : ' (записано)') : '';
-                msg.innerText = `${reactionTime} ${ms}`;
-                submsg.innerText = `${isEn ? 'Attempt' : 'Попытка'} ${testAttempts[currentTestType].length}/5${attemptSuffix}. ${isEn ? 'Click to continue' : 'Кликните для продолжения'}`;
-            }
-
-            updateTestSessionInfo();
-        }
-    }
-
-    window.onload = init;
-</script>
-
-</body>
+	<head>
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<title>Скорость реакции</title>
+		<link rel="stylesheet" href="style.css">
+		<script src="chart.js"></script>
+		<script src="main.js"></script>
+	</head>
+	<body>
+		
+		<div id="toast" class="toast" role="status" aria-live="polite" data-i18n="toastCopied">Скопировано!</div>
+		
+		<div class="container">
+			<div class="col col-left">
+				<div class="panel panel-flex">
+					<div class="nav-btn-group">
+						<button class="options-btn" data-action="open-tests" data-i18n="btnTests">⏱ Тесты</button>
+						<button class="options-btn" data-action="open-rules" data-i18n="btnRules">📜 Правила</button>
+						<button class="options-btn" data-action="open-settings" data-i18n="btnSettings">⚙ Настройки</button>
+					</div>
+					
+					<div class="form-header">
+						<h2 style="display:flex; align-items:center; justify-content:space-between; width:100%; gap:8px;">
+							<span id="formTitleText" data-i18n="formTitleNew">Запись за День</span>
+							<input type="number" id="input-day-number" min="1" value="1" style="width:64px; height:32px; padding:0 6px; font-weight:700; font-size:13px; text-align:center; background:var(--control-bg); border:1px solid var(--accent-cyan); color:var(--accent-cyan); border-radius:var(--radius-sm);">
+						</h2>
+					</div>
+					
+					<div class="form-scroll-area">
+						<div class="form-group">
+							<label data-i18n="lblF1">Formula 1 (5 средних):</label>
+							<input type="text" id="f1-results" class="form-input-watch" data-i18n-ph="phF1" placeholder="Напр: 210 215 205...">
+						</div>
+						<div class="form-group">
+							<label data-i18n="lblF1False">Formula 1 - Фальшстарты:</label>
+							<input type="number" id="f1-false" class="form-input-watch" value="0" min="0">
+						</div>
+						
+						<hr>
+						
+						<div class="form-group">
+							<label data-i18n="lblHb">Human Benchmark (5 средних):</label>
+							<input type="text" id="hb-results" class="form-input-watch" data-i18n-ph="phHb" placeholder="Напр: 195 200 190...">
+						</div>
+						<div class="form-group">
+							<label data-i18n="lblHbFalse">Human Benchmark - Фальшстарты:</label>
+							<input type="number" id="hb-false" class="form-input-watch" value="0" min="0">
+						</div>
+						
+						<hr>
+						
+						<div id="dynamic-tasks-list"></div>
+						<div style="display:flex; gap:6px;">
+							<input type="text" id="new-task-input" data-i18n-ph="phNewTask" placeholder="Новый пункт..." style="flex:1;">
+							<button id="addTaskBtn" class="options-btn" style="width:auto; padding:0 12px;" data-i18n="btnAdd">Добавить</button>
+						</div>
+						
+						<hr>
+						
+						<div class="checkbox-group weekend-box">
+							<input type="checkbox" id="is-weekend">
+							<label for="is-weekend" data-i18n="lblWeekend">Выходной (не идет в стату)</label>
+						</div>
+					</div>
+					
+					<div class="action-container">
+						<button id="clearInputBtn" class="btn-alt dynamic-btn" data-i18n="btnClear">Очистить</button>
+						<button id="saveBtn" data-i18n="btnSaveNew">Сохранить</button>
+						<button id="cancelEditBtn" class="btn-alt" style="display:none;" data-i18n="btnCancel">Отменить изменение</button>
+					</div>
+				</div>
+			</div>
+			
+			<div class="col col-right">
+				<div class="panel panel-auto">
+					<div class="form-header">
+						<h2 data-i18n="hdrStats">Статистика</h2>
+						<div style="display: flex; gap: 6px;">
+							<select id="target-day-select" class="dashboard-select"></select>
+							<select id="compare-day-select" class="dashboard-select"></select>
+						</div>
+					</div>
+					<div class="stats-grid" id="latest-stats"></div>
+					
+					<div class="charts-row">
+						<div class="chart-col">
+							<h2 data-i18n="chartReaction">График результатов (Активные дни)</h2>
+							<div class="chart-container"><canvas id="reactionChart"></canvas></div>
+						</div>
+						<div class="chart-col">
+							<h2 data-i18n="chartFs">Фальшстарты (Активные дни)</h2>
+							<div class="chart-container"><canvas id="falseStartsChart"></canvas></div>
+						</div>
+					</div>
+				</div>
+				
+				<div class="panel panel-flex">
+					<h2 data-i18n="hdrHistory">История</h2>
+					<div class="table-container">
+						<table class="history-table">
+							<thead>
+								<tr>
+									<th data-i18n="thDay">День</th>
+									<th data-i18n="thType">Тип</th>
+									<th data-i18n="thTotal">Общее (Ср / Мин / Макс)</th>
+									<th data-i18n="thF1">F1 (Ср / Мин / Макс)</th>
+									<th data-i18n="thHb">HB (Ср / Мин / Макс)</th>
+									<th data-i18n="thFs">ФС (F1/HB)</th>
+									<th data-i18n="thTasks">Задачи</th>
+									<th data-i18n="thActions">Действия</th>
+								</tr>
+							</thead>
+							<tbody id="history-body"></tbody>
+						</table>
+					</div>
+				</div>
+			</div>
+		</div>
+		
+		<div class="modal-overlay" id="rulesModalOverlay" role="dialog" aria-modal="true" aria-labelledby="rulesTitle">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h1 id="rulesTitle" data-i18n="hdrRulesModal">ПРАВИЛА</h1>
+					<div style="display:flex; gap:6px; align-items:center;">
+						<button class="options-btn" data-action="toggle-lang">🌐 EN / RU</button>
+						<button class="close-modal" data-action="close-modal" aria-label="Закрыть">✕</button>
+					</div>
+				</div>
+				
+				<div class="modal-body col-left">
+					<div id="currentRankDisplay" class="current-rank-display">
+						Ранг: <span>Нет данных</span>
+					</div>
+					
+					<div class="rule-card">
+						<div class="rule-card-header">
+							<span>📌</span>
+							<span data-i18n="hdrReg1">Общие правила</span>
+						</div>
+						<table class="rule-table">
+							<thead>
+								<tr>
+									<th data-i18n="thRegParam">Что</th>
+									<th data-i18n="thRegNorm">Требование</th>
+								</tr>
+							</thead>
+							<tbody>
+								<tr>
+									<td data-i18n="tdRegMin">Минимум в день</td>
+									<td data-i18n="tdRegMinVal">50 тестов реакции</td>
+								</tr>
+								<tr>
+									<td data-i18n="tdRegReg">Регулярность</td>
+									<td data-i18n="tdRegRegVal">Без пропусков, 1 выходной в неделю обязателен</td>
+								</tr>
+								<tr>
+									<td data-i18n="tdRegSurplus">Лишние попытки</td>
+									<td data-i18n="tdRegSurplusVal">Не идут в общую статистику</td>
+								</tr>
+							</tbody>
+						</table>
+					</div>
+					
+					<div class="rule-card">
+						<div class="rule-card-header">
+							<span>⏱</span>
+							<span data-i18n="hdrReg2">Как проходить тесты</span>
+						</div>
+						<table class="rule-table">
+							<thead>
+								<tr>
+									<th data-i18n="thRegTest">Тест</th>
+									<th data-i18n="thRegSpec">Спецификация</th>
+								</tr>
+							</thead>
+							<tbody>
+								<tr>
+									<td>Formula 1</td>
+									<td data-i18n="tdRegF1Spec">5 попыток (один полный блок)</td>
+								</tr>
+								<tr>
+									<td>Human Benchmark</td>
+									<td data-i18n="tdRegHbSpec">5 попыток (один полный блок)</td>
+								</tr>
+								<tr>
+									<td data-i18n="tdRegCalc">Расчет</td>
+									<td data-i18n="tdRegCalcVal">Среднее, минимум и максимум из обоих тестов</td>
+								</tr>
+							</tbody>
+						</table>
+					</div>
+					
+					<div class="rule-card">
+						<div class="rule-card-header">
+							<span>🎯</span>
+							<span data-i18n="hdrReg3">Норма в osu! и Kovaak's</span>
+						</div>
+						<table class="rule-table">
+							<thead>
+								<tr>
+									<th data-i18n="thRegDisc">Дисциплина</th>
+									<th data-i18n="thRegReq">Требование</th>
+									<th data-i18n="thRegStat" style="text-align: right;">Статус</th>
+								</tr>
+							</thead>
+							<tbody>
+								<tr>
+									<td>osu! HRDTHD</td>
+									<td data-i18n="tdRegOsuReq">Сессия от 30 мин (AR > 11, не ниже)</td>
+									<td style="text-align: right;"><span class="status-badge status-optional" data-i18n="statusOsuOpt">Опционально</span></td>
+								</tr>
+								<tr>
+									<td>Kovaak's</td>
+									<td data-i18n="tdRegKovReq">Плейлист Reactive Tracking от 30 мин</td>
+									<td style="text-align: right;"><span class="status-badge status-required" data-i18n="tdRegKovReqVal">Обязательно</span></td>
+								</tr>
+							</tbody>
+						</table>
+					</div>
+					
+					<div class="rule-card">
+						<div class="rule-card-header">
+							<span>📅</span>
+							<span data-i18n="hdrReg4">Сроки и пропуски</span>
+						</div>
+						<table class="rule-table">
+							<thead>
+								<tr>
+									<th data-i18n="thRegCat">Категория</th>
+									<th data-i18n="thRegCond">Условия</th>
+								</tr>
+							</thead>
+							<tbody>
+								<tr>
+									<td data-i18n="tdRegDur">Длительность</td>
+									<td data-i18n="tdRegDurVal">3 месяца (08.09.2026 — 11.09.2026), возможно продление</td>
+								</tr>
+								<tr>
+									<td data-i18n="tdRegRetake">Пропуски</td>
+									<td data-i18n="tdRegRetakeVal">Если день пропущен или не доделан — требуется отработка</td>
+								</tr>
+							</tbody>
+						</table>
+					</div>
+					
+					<div class="rule-card">
+						<div class="rule-card-header">
+							<span>🏆</span>
+							<span data-i18n="hdrReg5">Ранги реакции</span>
+						</div>
+						<table class="rule-table rank-table" id="rankTable">
+							<thead>
+								<tr>
+									<th data-i18n="thRankTime">Время (мс)</th>
+									<th data-i18n="thRankRank">Ранг</th>
+									<th data-i18n="thRankRef">Сравнение</th>
+								</tr>
+							</thead>
+							<tbody>
+								<tr id="rank-1">
+									<td>&lt; 150</td>
+									<td id="r1-name" data-i18n="r1Name">Мировой уровень</td>
+									<td id="r1-desc" data-i18n="r1Desc">Киберспортсмены, пилоты F1</td>
+								</tr>
+								<tr id="rank-2">
+									<td>150 - 180</td>
+									<td id="r2-name" data-i18n="r2Name">Элита</td>
+									<td id="r2-desc" data-i18n="r2Desc">Топ-геймеры, пилоты истребителей</td>
+								</tr>
+								<tr id="rank-3">
+									<td>180 - 210</td>
+									<td id="r3-name" data-i18n="r3Name">Продвинутый</td>
+									<td id="r3-desc" data-i18n="r3Desc">Опытные игроки, спортсмены</td>
+								</tr>
+								<tr id="rank-4">
+									<td>210 - 250</td>
+									<td id="r4-name" data-i18n="r4Name">Норма</td>
+									<td id="r4-desc" data-i18n="r4Desc">Обычный человек</td>
+								</tr>
+								<tr id="rank-5">
+									<td>250 - 300</td>
+									<td id="r5-name" data-i18n="r5Name">Ниже среднего</td>
+									<td id="r5-desc" data-i18n="r5Desc">Любители, усталость</td>
+								</tr>
+								<tr id="rank-6">
+									<td>&gt; 300</td>
+									<td id="r6-name" data-i18n="r6Name">Медленно</td>
+									<td id="r6-desc" data-i18n="r6Desc">Сильная усталость, нет фокуса</td>
+								</tr>
+							</tbody>
+						</table>
+					</div>
+				</div>
+			</div>
+		</div>
+		
+		<div class="modal-overlay" id="settingsModalOverlay" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h1 id="settingsTitle" data-i18n="hdrSettingsModal">НАСТРОЙКИ</h1>
+					<div style="display:flex; gap:6px; align-items:center;">
+						<button class="options-btn" data-action="toggle-lang">🌐 EN / RU</button>
+						<button class="close-modal" data-action="close-modal" aria-label="Закрыть">✕</button>
+					</div>
+				</div>
+				<div class="modal-body col-left">
+					<div class="rule-card">
+						<div class="rule-card-header"><span>🎨</span><span data-i18n="hdrReg6">Внешний вид и цвета</span></div>
+						
+						<h3 data-i18n="hdrThemeMain">Системные цвета UI</h3>
+						<div class="theme-grid">
+							<div class="color-picker-group"><label data-i18n="lblThemeBg">Фон страницы:</label><input type="color" id="color-bg" value="#000000"></div>
+							<div class="color-picker-group"><label data-i18n="lblThemePanel">Фон панелей:</label><input type="color" id="color-panel" value="#121212"></div>
+							<div class="color-picker-group"><label data-i18n="lblThemeControl">Кнопки и поля:</label><input type="color" id="color-control" value="#1e1e1e"></div>
+							<div class="color-picker-group"><label data-i18n="lblThemeBorder">Границы и линии:</label><input type="color" id="color-border" value="#282828"></div>
+							<div class="color-picker-group"><label data-i18n="lblThemeText">Основной текст:</label><input type="color" id="color-text" value="#f3f3f3"></div>
+							<div class="color-picker-group"><label data-i18n="lblThemeTextMuted">Вторичный текст:</label><input type="color" id="color-text-muted" value="#9e9e9e"></div>
+							<div class="color-picker-group"><label data-i18n="lblThemeAcc1">Главный акцент (UI/F1):</label><input type="color" id="color-accent1" value="#4cc2ff"></div>
+							<div class="color-picker-group"><label data-i18n="lblThemeAcc2">Второй акцент (HB):</label><input type="color" id="color-accent2" value="#79b8ff"></div>
+						</div>
+						<div style="display:flex; justify-content: flex-start; margin-bottom: 6px;">
+							<button class="options-btn btn-alt" id="resetThemeBtn" data-i18n="btnResetTheme">Сбросить цвета UI</button>
+						</div>
+						
+						<h3 data-i18n="hdrThemeTests">Цвета тестов реакции</h3>
+						<div class="theme-grid">
+							<div class="color-picker-group"><label data-i18n="lblTestIdle">Ожидание (Idle):</label><input type="color" id="color-test-idle" value="#181818"></div>
+							<div class="color-picker-group"><label data-i18n="lblTestWaiting">Подготовка (Wait):</label><input type="color" id="color-test-waiting" value="#8a1c14"></div>
+							<div class="color-picker-group"><label data-i18n="lblTestReady">Срабатывание (Ready):</label><input type="color" id="color-test-ready" value="#107c41"></div>
+							<div class="color-picker-group"><label data-i18n="lblTestFail">Ошибка/Фальшстарт:</label><input type="color" id="color-test-fail" value="#a80000"></div>
+							<div class="color-picker-group"><label data-i18n="lblTestBlue">Ложный сигнал (No-Go):</label><input type="color" id="color-test-blue" value="#004b98"></div>
+							<div class="color-picker-group"><label data-i18n="lblTestF1Light">Огни F1 (Старт):</label><input type="color" id="color-test-f1" value="#e81123"></div>
+						</div>
+						<div style="display:flex; justify-content: flex-start;">
+							<button class="options-btn btn-alt" id="resetTestColorsBtn" data-i18n="btnResetTestColors">Сбросить цвета тестов</button>
+						</div>
+					</div>
+					
+					<div class="rule-card">
+						<div class="rule-card-header"><span>🔊</span><span data-i18n="hdrRegAudio">Звук для аудио-теста</span></div>
+						<div style="background: var(--panel-bg); padding: 10px 12px; border-radius: var(--radius-sm); border: 1px solid var(--border);">
+							<div id="audio-custom-status" style="font-weight: 600; font-size: 12.5px; margin-bottom: 2px;"></div>
+							<div style="font-size: 11px; color: var(--text-muted);" data-i18n="audioCustomDesc">Загрузите короткий звук (MP3, WAV, OGG) для тренировки без задержек.</div>
+						</div>
+						<div style="display: flex; gap: 6px; flex-wrap: wrap;">
+							<button class="options-btn btn-alt" id="uploadAudioBtn" style="flex:1;" data-i18n="btnUploadAudio">🎵 Загрузить аудио</button>
+							<button class="options-btn btn-alt" id="previewAudioBtn" style="flex:1;" data-i18n="btnPreviewAudio">▶ Прослушать</button>
+							<button class="options-btn btn-danger" id="resetAudioBtn" style="flex:1;" data-i18n="btnResetAudio">🔄 Вернуть стандартный звук</button>
+						</div>
+						<input type="file" id="custom-audio-input" accept="audio/*" style="display:none;">
+					</div>
+					
+					<div class="rule-card">
+						<div class="rule-card-header"><span>💾</span><span data-i18n="hdrReg8">Данные и экспорт</span></div>
+						<div style="display: flex; flex-direction: column; gap: 6px;">
+							<button class="options-btn btn-alt" id="renumberBtn" data-i18n="btnRenumber">🔢 Перенумеровать дни по порядку</button>
+							<div style="display: flex; gap: 6px;">
+								<button class="options-btn btn-alt" id="exportBtn" style="flex:1;" data-i18n="btnExportData">📥 Скачать JSON</button>
+								<button class="options-btn btn-alt" id="importBtn" style="flex:1;" data-i18n="btnImportData">📤 Загрузить JSON</button>
+							</div>
+							<input type="file" id="import-file-input" accept=".json" style="display:none;">
+							<button class="options-btn btn-danger" id="clearAllDataBtn" data-i18n="btnClearData">Удалить все данные</button>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+		
+		<div class="modal-overlay" id="testModalOverlay" role="dialog" aria-modal="true">
+			<div class="modal-content" id="test-modal-content">
+				<div class="test-top-trigger" id="testTopTrigger"></div>
+				<div class="test-header">
+					<div id="testTypeBtnsContainer" style="display: flex; gap: 6px; flex-wrap: wrap;">
+						<button class="options-btn test-active-btn" data-test-type="1" id="btn-test-1" data-i18n="btnTest1">Human Benchmark</button>
+						<button class="options-btn" data-test-type="2" id="btn-test-2" data-i18n="btnTest2">Валттери Боттас (F1)</button>
+						<button class="options-btn" data-test-type="3" id="btn-test-3" data-i18n="btnTest3">Синий цвет (Не кликать)</button>
+						<button class="options-btn" data-test-type="4" id="btn-test-4" data-i18n="btnTest4">На звук</button>
+					</div>
+					<div style="display:flex; gap:10px; align-items:center; flex-wrap: wrap;">
+						<div style="display:flex; align-items:center; gap:6px;">
+							<label for="test-autofill-mode" style="font-size:11.5px; cursor:pointer;" data-i18n="lblAfMode">Авто-сохранение:</label>
+							<select id="test-autofill-mode" class="dashboard-select" style="height:32px; padding:0 8px; font-size:11.5px;">
+								<option value="attempt" data-i18n="afAttempt">Каждая попытка</option>
+								<option value="each" data-i18n="afEach">Каждое среднее (1)</option>
+								<option value="full5" data-i18n="afFull5">Сразу весь блок (5 шт)</option>
+								<option value="off" data-i18n="afOff">Выключено</option>
+							</select>
+						</div>
+						<label style="display:flex; align-items:center; gap:4px; cursor:pointer; font-size:11.5px;">
+							<input type="checkbox" id="hide-test-text"> <span data-i18n="lblHideText">Скрыть текст</span>
+						</label>
+						<label style="display:flex; align-items:center; gap:4px; cursor:pointer; font-size:11.5px;">
+							<input type="checkbox" id="hide-test-session-info"> <span data-i18n="lblHideSession">Скрыть попытки</span>
+						</label>
+						<label style="display:flex; align-items:center; gap:4px; cursor:pointer; font-size:11.5px;">
+							<input type="checkbox" id="hide-test-header"> <span data-i18n="lblHidePanel">Скрыть панель</span>
+						</label>
+						<button class="options-btn" id="fullscreenTestBtn" data-i18n="btnTestFs">⛶ На весь экран</button>
+						<button class="btn-danger options-btn" data-action="close-test" data-i18n="btnTestClose">✖ Закрыть</button>
+					</div>
+				</div>
+				<div class="test-area" id="test-area">
+					<div class="f1-lights-container" id="f1-lights">
+						<div class="f1-light"></div>
+						<div class="f1-light"></div>
+						<div class="f1-light"></div>
+						<div class="f1-light"></div>
+						<div class="f1-light"></div>
+					</div>
+					<div class="test-text-wrap" id="test-text-wrap">
+						<span class="test-text" id="test-message">Нажмите чтобы начать</span>
+						<span class="test-subtext" id="test-submessage"></span>
+					</div>
+					<div class="test-session-info" id="test-session-info">Попытка: 0/5 в текущей серии [] | Накоплено усредненных (0/5): []</div>
+				</div>
+			</div>
+		</div>
+	</body>
 </html>
